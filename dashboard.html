@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RMT SafeDocs - Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>RMT SafeDocs Dashboard</h1>
+    <div class="topbar-actions">
+      <button id="btnAdd">+ Add PDF</button>
+      <button id="btnSettings" class="ghost">Settings</button>
+      <button id="btnLogout" class="ghost">Logout</button>
+    </div>
+  </header>
+  <main class="container">
+    <section class="card">
+      <input id="searchBox" type="text" placeholder="Search DocID / Document Name" />
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>DocID</th><th>Document Name</th><th>Version</th><th>Updated</th><th>QR</th><th>Actions</th></tr></thead>
+          <tbody id="docTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
+
