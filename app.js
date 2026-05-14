@@ -1,5 +1,5 @@
 ﻿const APP = {
-  apiUrl: 'https://script.google.com/macros/s/AKfycbxNvvqLyztF8qzkhUo0rCG6gw4I5zKzGUmOPGiTWIJdakBYiaP2hygWKOW-URdnosE/exec'
+  apiUrl: 'https://script.google.com/macros/s/AKfycbyk-9Kb18chQJMRdsXcePUDVQdRhwx5AnmJw2WWP57V71GyxCt2sUzDrKggMFAKfwI/exec'
 };
 
 async function postAction(payload) {
@@ -11,9 +11,28 @@ async function postAction(payload) {
   return res.json();
 }
 
+function themedSwal(options) {
+  if (!window.Swal) return Promise.resolve({ isConfirmed: true });
+  const baseCustomClass = {
+    popup: 'rmt-swal',
+    title: 'rmt-swal-title',
+    htmlContainer: 'rmt-swal-html',
+    confirmButton: 'rmt-swal-confirm',
+    cancelButton: 'rmt-swal-cancel'
+  };
+  const mergedCustomClass = Object.assign({}, baseCustomClass, (options && options.customClass) || {});
+  const defaults = {
+    background: '#ffffff',
+    color: '#132433',
+    buttonsStyling: false,
+    customClass: mergedCustomClass
+  };
+  return Swal.fire(Object.assign({}, defaults, options || {}, { customClass: mergedCustomClass }));
+}
+
 function showLoading(text) {
   if (!window.Swal) return;
-  Swal.fire({
+  themedSwal({
     title: text || 'Processing...',
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading()
@@ -22,6 +41,65 @@ function showLoading(text) {
 
 function closeLoading() {
   if (window.Swal) Swal.close();
+}
+
+function iconSvg(name) {
+  const icons = {
+    qr: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/><path d="M14 14h3v3h-3zM19 14h2v2h-2zM17 17h4v4h-4zM14 19h2v2h-2z"/></svg>',
+    view: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3.2"/></svg>',
+    replace: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4"/><path d="M18 2v4h-4"/><path d="M21 12a9 9 0 0 1-15.3 6.4"/><path d="M6 22v-4h4"/></svg>',
+    history: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v6l4 2"/></svg>',
+    delete: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M7 7l1 13h8l1-13"/><path d="M10 11v6M14 11v6"/></svg>'
+  };
+  return icons[name] || '';
+}
+
+function buildHistoryTimelineHtml(doc, history) {
+  const docId = doc && doc.docId ? doc.docId : '-';
+  const docName = doc && doc.documentName ? doc.documentName : docId;
+  if (!history || history.length === 0) {
+    return '<div style="padding:16px;border:1px solid #e2e9ef;border-radius:12px;background:#fff">No revision history</div>';
+  }
+
+  const latestVersion = Math.max.apply(null, history.map((h) => Number(h.newVersion || 0)));
+  const nodes = history.map((h, idx) => {
+    const version = Number(h.newVersion || 0);
+    const isLatest = version === latestVersion;
+    const userName = String(h.actionBy || '-');
+    const initials = userName ? userName.substring(0, 1).toUpperCase() : '?';
+    const bg = isLatest ? '#eef6f4' : '#ffffff';
+    const border = isLatest ? '#bfe0d8' : '#dbe3ea';
+    const badgeBg = isLatest ? '#0f766e' : '#eef2f6';
+    const badgeColor = isLatest ? '#ffffff' : '#4a5c6f';
+    return (
+      '<div style="position:relative;padding-left:34px;margin-bottom:14px">' +
+      '<div style="position:absolute;left:0;top:2px;width:18px;height:18px;border-radius:999px;background:' + (isLatest ? '#0f766e' : '#fff') + ';border:2px solid ' + (isLatest ? '#0f766e' : '#b8c4cf') + ';"></div>' +
+      (idx < history.length - 1 ? '<div style="position:absolute;left:8px;top:22px;width:2px;height:calc(100% + 8px);background:#dbe3ea;"></div>' : '') +
+      '<div style="border:1px solid ' + border + ';background:' + bg + ';border-radius:12px;padding:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">' +
+      '<span style="font-weight:700;color:#1f3447">' + (h.actionDate || '-') + '</span>' +
+      '<span style="font-size:12px;padding:3px 8px;border-radius:999px;background:' + badgeBg + ';color:' + badgeColor + '">v' + version + (isLatest ? ' (latest)' : '') + '</span>' +
+      '</div>' +
+      '<div style="font-size:13px;color:#4c5f73;line-height:1.5">' + (h.remark || h.action || '-') + '</div>' +
+      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#5d7083">' +
+      '<div style="width:20px;height:20px;border-radius:999px;background:#1f4b7a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">' + initials + '</div>' +
+      '<span>แก้ไขโดย: ' + userName + '</span>' +
+      '</div>' +
+      '</div>' +
+      '</div>'
+    );
+  }).join('');
+
+  return (
+    '<div style="text-align:left">' +
+    '<div style="margin-bottom:10px;padding:10px 12px;border:1px solid #dbe3ea;background:#f5f8fb;border-radius:10px;">' +
+    '<div style="font-size:13px;color:#5c7185">Document</div>' +
+    '<div style="font-weight:800;color:#12273a;font-size:15px">' + docName + '</div>' +
+    '<div style="font-size:12px;color:#72869a;margin-top:2px">ID: ' + docId + '</div>' +
+    '</div>' +
+    '<div style="max-height:420px;overflow:auto;padding-right:4px">' + nodes + '</div>' +
+    '</div>'
+  );
 }
 
 function fileToBase64(file) {
@@ -49,30 +127,49 @@ async function initLogin() {
       ev.preventDefault();
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value.trim();
+      if (window.Swal) {
+        themedSwal({
+          title: 'Signing in...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+      }
       const res = await postAction({ action: 'login', username, password });
+      if (window.Swal) Swal.close();
       if (res.ok) {
         localStorage.setItem('rmt_token', res.token);
         localStorage.setItem('rmt_actor', username);
+        if (window.Swal) {
+          await themedSwal({
+            icon: 'success',
+            title: 'Login Success',
+            timer: 900,
+            showConfirmButton: false
+          });
+        }
         window.location.href = './dashboard.html';
         return;
       }
       if (window.Swal) {
-        await Swal.fire({
+        await themedSwal({
           icon: 'error',
           title: 'Login Failed',
           text: res.error || 'Invalid username or password'
         });
       }
       document.getElementById('loginError').textContent = res.error || 'Login failed';
+      if (!window.Swal) alert(res.error || 'Login failed');
     } catch (err) {
+      if (window.Swal) Swal.close();
       if (window.Swal) {
-        await Swal.fire({
+        await themedSwal({
           icon: 'error',
           title: 'Connection Error',
           text: 'Cannot connect to server. Please try again.'
         });
       }
       document.getElementById('loginError').textContent = 'Connection error';
+      if (!window.Swal) alert('Connection error');
     }
   });
 }
@@ -87,14 +184,23 @@ async function initDashboard() {
   const btnLogout = document.getElementById('btnLogout');
   let docs = [];
 
-  btnLogout.onclick = () => {
+  btnLogout.onclick = async () => {
+    const result = await themedSwal({
+      icon: 'warning',
+      title: 'Logout?',
+      text: 'You are about to sign out from this session.',
+      showCancelButton: true,
+      confirmButtonText: 'Logout',
+      cancelButtonText: 'Cancel'
+    });
+    if (!result.isConfirmed) return;
     localStorage.removeItem('rmt_token');
     localStorage.removeItem('rmt_actor');
     window.location.href = './index.html';
   };
 
   btnAdd.onclick = async () => {
-    const result = await Swal.fire({
+    const result = await themedSwal({
       title: 'Add New Document',
       width: 760,
       html:
@@ -135,8 +241,8 @@ async function initDashboard() {
       file: { name: file.name, mimeType: file.type, base64: await fileToBase64(file) }
     });
     closeLoading();
-    if (!res.ok) return Swal.fire('Error', res.error || 'Add failed', 'error');
-    Swal.fire('Success', 'Created ' + res.docId, 'success');
+    if (!res.ok) return themedSwal({ icon: 'error', title: 'Error', text: res.error || 'Add failed' });
+    themedSwal({ icon: 'success', title: 'Success', text: 'Created ' + res.docId });
     await loadDocuments();
   };
 
@@ -144,7 +250,7 @@ async function initDashboard() {
     showLoading('Loading users...');
     const usersRes = await postAction({ action: 'listUsers' });
     closeLoading();
-    if (!usersRes.ok) return Swal.fire('Error', usersRes.error || 'Cannot load users', 'error');
+    if (!usersRes.ok) return themedSwal({ icon: 'error', title: 'Error', text: usersRes.error || 'Cannot load users' });
     const userRows = (usersRes.users || []).map((u) => `<tr><td style="padding:8px;border-top:1px solid #edf1f5">${u.userId}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.username}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.role}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.status}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.createdDate}</td></tr>`).join('');
     const html = '<div style="text-align:left">' +
       '<div style="background:#f5fbfa;border:1px solid #d7ebe8;border-radius:12px;padding:12px;margin-bottom:12px">' +
@@ -162,7 +268,7 @@ async function initDashboard() {
       '<table style="width:100%;text-align:left;border-collapse:collapse">' +
       '<thead><tr style="background:#f8fbfd"><th style="padding:8px">ID</th><th style="padding:8px">Username</th><th style="padding:8px">Role</th><th style="padding:8px">Status</th><th style="padding:8px">Created</th></tr></thead>' +
       '<tbody>' + userRows + '</tbody></table></div></div>';
-    const result = await Swal.fire({ title: 'User Settings', width: 920, html, showCancelButton: true, confirmButtonText: 'Add User', preConfirm: () => {
+    const result = await themedSwal({ title: 'User Settings', width: 920, html, showCancelButton: true, confirmButtonText: 'Add User', preConfirm: () => {
       const username = document.getElementById('sw-user').value.trim();
       const password = document.getElementById('sw-pass').value.trim();
       const role = document.getElementById('sw-role').value;
@@ -174,15 +280,34 @@ async function initDashboard() {
     }});
     if (!result.isConfirmed) return;
     const addRes = await postAction({ action: 'addUser', actor: localStorage.getItem('rmt_actor') || 'admin', username: result.value.username, password: result.value.password, role: result.value.role });
-    if (!addRes.ok) return Swal.fire('Error', addRes.error || 'Cannot add user', 'error');
-    Swal.fire('Success', 'User created: ' + addRes.username, 'success');
+    if (!addRes.ok) return themedSwal({ icon: 'error', title: 'Error', text: addRes.error || 'Cannot add user' });
+    themedSwal({ icon: 'success', title: 'Success', text: 'User created: ' + addRes.username });
   };
 
-  async function onReplace(docId) {
-    const result = await Swal.fire({
-      title: 'Replace PDF - ' + docId,
-      html: '<input id="sw-file" class="swal2-file" type="file" accept="application/pdf"><input id="sw-remark" class="swal2-input" placeholder="Remark (optional)">',
+  async function onReplace(doc) {
+    const docId = doc.docId;
+    const docName = doc.documentName || docId;
+    const result = await themedSwal({
+      title: 'Replace PDF - ' + docName,
+      width: 760,
+      html:
+        '<div style="text-align:left">' +
+        '<p style="margin:0 0 12px;color:#5f6f7f;font-size:13px">Upload a new revision file. QR code will remain the same and users will see the latest version.</p>' +
+        '<div style="display:grid;gap:12px">' +
+        '<div style="border:1px dashed #aac6cf;border-radius:12px;background:#f7fcfb;padding:14px">' +
+        '<label style="display:block;margin-bottom:8px;font-weight:700;color:#1f3447">New PDF Revision</label>' +
+        '<input id="sw-file" class="swal2-file" type="file" accept="application/pdf" style="margin:0;width:100%">' +
+        '<p style="margin:8px 0 0;color:#688092;font-size:12px">Allowed type: PDF, max size: 25 MB</p>' +
+        '</div>' +
+        '<div>' +
+        '<label style="display:block;margin-bottom:6px;font-weight:700;color:#1f3447">Revision Remark (Optional)</label>' +
+        '<input id="sw-remark" class="swal2-input" placeholder="e.g. Update section 4.2 for machine setup" style="margin:0;width:100%">' +
+        '</div>' +
+        '</div>' +
+        '</div>',
       showCancelButton: true,
+      confirmButtonText: 'Upload Revision',
+      cancelButtonText: 'Cancel',
       preConfirm: () => {
         const file = document.getElementById('sw-file').files[0];
         const remark = document.getElementById('sw-remark').value.trim();
@@ -204,25 +329,57 @@ async function initDashboard() {
       file: { name: file.name, mimeType: file.type, base64: await fileToBase64(file) }
     });
     closeLoading();
-    if (!res.ok) return Swal.fire('Error', res.error || 'Replace failed', 'error');
-    Swal.fire('Success', docId + ' upgraded to v' + res.version, 'success');
+    if (!res.ok) return themedSwal({ icon: 'error', title: 'Error', text: res.error || 'Replace failed' });
+    themedSwal({ icon: 'success', title: 'Success', text: docId + ' upgraded to v' + res.version });
     await loadDocuments();
   }
 
-  async function onHistory(docId) {
+  async function onHistory(doc) {
+    const docId = doc.docId;
     showLoading('Loading history...');
     const res = await postAction({ action: 'getDocumentHistory', docId });
     closeLoading();
-    if (!res.ok) return Swal.fire('Error', res.error || 'Cannot load history', 'error');
-    const rows = (res.history || []).map((h) => `<tr><td>${h.newVersion}</td><td>${h.action}</td><td>${h.actionBy}</td><td>${h.actionDate}</td><td>${h.remark || '-'}</td></tr>`).join('');
-    Swal.fire({ title: 'History - ' + docId, width: 900, html: '<div style="overflow:auto"><table style="width:100%;text-align:left"><thead><tr><th>Version</th><th>Action</th><th>By</th><th>Date</th><th>Remark</th></tr></thead><tbody>' + rows + '</tbody></table></div>' });
+    if (!res.ok) return themedSwal({ icon: 'error', title: 'Error', text: res.error || 'Cannot load history' });
+    const html = buildHistoryTimelineHtml(doc, res.history || []);
+    themedSwal({
+      title: 'Revision History',
+      width: 920,
+      html: html,
+      confirmButtonText: 'Close'
+    });
+  }
+
+  async function onDelete(docId) {
+    const result = await themedSwal({
+      icon: 'warning',
+      title: 'Delete Document?',
+      text: docId + ' will be set inactive and hidden from dashboard.',
+      input: 'text',
+      inputLabel: 'Remark (optional)',
+      inputPlaceholder: 'Reason for deletion',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel'
+    });
+    if (!result.isConfirmed) return;
+    showLoading('Deleting document...');
+    const res = await postAction({
+      action: 'deleteDocument',
+      docId,
+      remark: result.value || '',
+      actor: localStorage.getItem('rmt_actor') || 'admin'
+    });
+    closeLoading();
+    if (!res.ok) return themedSwal({ icon: 'error', title: 'Error', text: res.error || 'Delete failed' });
+    themedSwal({ icon: 'success', title: 'Deleted', text: docId + ' removed from active list.' });
+    await loadDocuments();
   }
 
   function render(list) {
     body.innerHTML = '';
     list.forEach((d, idx) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${d.docId}</td><td>${d.documentName}</td><td><span class="pill">v${d.version}</span></td><td>${d.updatedDate}</td><td><button data-act="qr" data-id="${d.docId}">QR</button></td><td><div class="actions"><button data-act="view" data-id="${d.docId}">View</button><button data-act="replace" data-id="${d.docId}">Replace</button><button data-act="history" data-id="${d.docId}">History</button></div></td>`;
+      tr.innerHTML = `<td>${d.docId}</td><td>${d.documentName}</td><td><span class="pill">v${d.version}</span></td><td>${d.updatedDate}</td><td><button class="icon-btn" title="QR Code" data-act="qr" data-id="${d.docId}">${iconSvg('qr')}</button></td><td><div class="actions"><button class="icon-btn" title="View" data-act="view" data-id="${d.docId}">${iconSvg('view')}</button><button class="icon-btn" title="Replace" data-act="replace" data-id="${d.docId}">${iconSvg('replace')}</button><button class="icon-btn" title="History" data-act="history" data-id="${d.docId}">${iconSvg('history')}</button><button class="icon-btn icon-danger" title="Delete" data-act="delete" data-id="${d.docId}">${iconSvg('delete')}</button></div></td>`;
       body.appendChild(tr);
     });
     body.querySelectorAll('button[data-act]').forEach((btn) => {
@@ -231,7 +388,7 @@ async function initDashboard() {
         const id = btn.getAttribute('data-id');
         const doc = docs.find((x) => String(x.docId) === String(id));
         if (act === 'qr' && doc) {
-          Swal.fire({
+          themedSwal({
             title: 'QR Code - ' + id,
             width: 420,
             html: '<div id="sw-qr" style="display:flex;justify-content:center;padding:8px 0"></div><p style="font-size:12px;color:#66798b;margin:8px 0 0;word-break:break-all">' + doc.qrUrl + '</p>',
@@ -242,8 +399,9 @@ async function initDashboard() {
           });
         }
         if (act === 'view') window.open('./view.html?docId=' + encodeURIComponent(id), '_blank');
-        if (act === 'replace') onReplace(id);
-        if (act === 'history') onHistory(id);
+        if (act === 'replace' && doc) onReplace(doc);
+        if (act === 'history' && doc) onHistory(doc);
+        if (act === 'delete') onDelete(id);
       };
     });
   }
@@ -252,7 +410,7 @@ async function initDashboard() {
     showLoading('Loading documents...');
     const res = await postAction({ action: 'listDocuments' });
     closeLoading();
-    if (!res.ok) return Swal.fire('Error', res.error || 'Cannot load documents', 'error');
+    if (!res.ok) return themedSwal({ icon: 'error', title: 'Error', text: res.error || 'Cannot load documents' });
     docs = res.documents || [];
     render(docs);
   }
@@ -287,7 +445,7 @@ async function initView() {
   dl.textContent = `Download ${d.docId} v${d.version}`;
   dl.onclick = () => {
     if (window.Swal) {
-      Swal.fire({
+      themedSwal({
         title: 'Starting download...',
         timer: 1200,
         showConfirmButton: false,
@@ -302,3 +460,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initDashboard();
   await initView();
 });
+
+
