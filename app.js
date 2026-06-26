@@ -596,28 +596,47 @@ async function initDashboard() {
 }
 
 async function initView() {
-  const frame = document.getElementById('pdfViewer');
-  if (!frame) return;
+  const pages = document.getElementById('pdfPages');
+  if (!pages) return;
   const qs = new URLSearchParams(window.location.search);
   const docId = qs.get('docId') || '';
   const title = document.getElementById('docTitle');
   const meta = document.getElementById('docMeta');
   const dl = document.getElementById('downloadLink');
+  const loading = document.getElementById('pdfLoading');
+  const loadingTitle = document.getElementById('pdfLoadingTitle');
+  const loadingText = document.getElementById('pdfLoadingText');
+  const overlay = document.getElementById('viewerOverlay');
+  const overlayTitle = document.getElementById('viewerOverlayTitle');
+  const overlayText = document.getElementById('viewerOverlayText');
+  const isMobileViewer = window.matchMedia('(max-width: 820px)').matches;
+  const setViewerLoading = (head, text) => {
+    if (loadingTitle) loadingTitle.textContent = head || 'Loading document...';
+    if (loadingText) loadingText.textContent = text || '';
+    if (loading) loading.classList.remove('is-hidden');
+    if (overlayTitle) overlayTitle.textContent = head || 'Loading document...';
+    if (overlayText) overlayText.textContent = text || '';
+    if (overlay) overlay.classList.remove('is-hidden');
+  };
+  const clearViewerLoading = () => {
+    if (loading) loading.classList.add('is-hidden');
+    if (overlay) overlay.classList.add('is-hidden');
+  };
   if (!docId) return (title.textContent = 'Missing docId');
   let objectUrl = null;
-  showLoading('Loading document...');
+  setViewerLoading('Loading document...', 'Reading document metadata');
   const res = await postAction({ action: 'getDocumentByDocId', docId });
   if (!res.ok) {
-    closeLoading();
+    clearViewerLoading();
     return (title.textContent = res.error || 'Document not found');
   }
   const d = res.document;
   title.textContent = d.documentName;
   meta.textContent = `Version ${d.version} | Updated ${d.updatedDate}`;
+  setViewerLoading('Loading document...', 'Downloading PDF file from server');
   const fileRes = await postAction({ action: 'getDocumentFile', docId });
-  closeLoading();
   if (!fileRes.ok || !fileRes.file || !fileRes.file.base64) {
-    frame.removeAttribute('src');
+    clearViewerLoading();
     return themedSwal({
       icon: 'error',
       title: 'Open failed',
@@ -630,7 +649,6 @@ async function initView() {
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   const blob = new Blob([bytes], { type: fileData.mimeType || 'application/pdf' });
   objectUrl = URL.createObjectURL(blob);
-  frame.src = objectUrl;
   dl.href = objectUrl;
   dl.download = fileData.fileName || `${d.docId}_v${d.version}.pdf`;
   dl.textContent = `Download ${d.docId} v${d.version}`;
@@ -644,6 +662,56 @@ async function initView() {
       }
     });
   };
+  pages.innerHTML = '';
+  if (!window.pdfjsLib) {
+    clearViewerLoading();
+    const fallback = document.createElement('div');
+    fallback.className = 'pdf-page-card';
+    fallback.innerHTML = '<div class="pdf-page-head"><span class="pdf-page-label">Preview unavailable</span></div><p class="muted">PDF viewer library could not be loaded. Please use the download button.</p>';
+    pages.appendChild(fallback);
+    return;
+  }
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    setViewerLoading('Rendering PDF...', 'Preparing document pages');
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      setViewerLoading('Rendering PDF...', `Rendering page ${pageNumber} of ${pdf.numPages}`);
+      const page = await pdf.getPage(pageNumber);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const availableWidth = Math.max(320, pages.clientWidth - (isMobileViewer ? 20 : 28));
+      const fitScale = availableWidth / baseViewport.width;
+      const renderScale = isMobileViewer ? Math.min(fitScale, 1.15) : Math.min(fitScale, 1.35);
+      const viewport = page.getViewport({ scale: renderScale });
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-page-canvas';
+      const context = canvas.getContext('2d');
+      const outputScale = isMobileViewer ? 1.15 : Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+      context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+      await page.render({ canvasContext: context, viewport }).promise;
+
+      const card = document.createElement('div');
+      card.className = 'pdf-page-card';
+      card.innerHTML = `<div class="pdf-page-head"><span class="pdf-page-label">Page ${pageNumber}</span><span class="pdf-page-size">${Math.round(baseViewport.width)} x ${Math.round(baseViewport.height)}</span></div>`;
+      card.appendChild(canvas);
+      pages.appendChild(card);
+    }
+  } catch (err) {
+    const fallback = document.createElement('div');
+    fallback.className = 'pdf-page-card';
+    fallback.innerHTML = '<div class="pdf-page-head"><span class="pdf-page-label">Render failed</span></div><p class="muted">Cannot preview this PDF on this device right now. Please use the download button.</p>';
+    pages.appendChild(fallback);
+    themedSwal({
+      icon: 'warning',
+      title: 'Preview issue',
+      text: err && err.message ? err.message : 'Cannot render PDF preview'
+    });
+  }
+  clearViewerLoading();
   window.addEventListener('beforeunload', () => {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }, { once: true });

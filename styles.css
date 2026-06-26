@@ -431,9 +431,144 @@ th {
   border-color: #e9c8c8;
 }
 .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #e6f4ef; color: #115743; font-size: 12px; }
+.viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(238, 242, 246, 0.92);
+  backdrop-filter: blur(4px);
+}
+.viewer-overlay.is-hidden {
+  display: none;
+}
+.viewer-overlay-card {
+  width: min(420px, 100%);
+  padding: 22px 20px;
+  border-radius: 18px;
+  border: 1px solid #d6e0e8;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(16, 32, 45, 0.18);
+  text-align: center;
+}
+.viewer-overlay-card strong {
+  display: block;
+  margin: 14px 0 8px;
+  color: #173247;
+  font-size: 18px;
+}
+.viewer-overlay-card p {
+  margin: 0;
+  color: #617587;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+}
 .viewer-wrap { padding: 14px; }
-.viewer-card { max-width: 1000px; margin: 0 auto; padding: 14px; }
-.pdf-frame { width: 100%; height: 75vh; border: 1px solid var(--line); border-radius: 10px; }
+.viewer-card { max-width: 1040px; margin: 0 auto; padding: 18px; }
+.viewer-loading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid #d7e2ea;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fcfb 0%, #f4f9fb 100%);
+}
+.viewer-loading strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #153247;
+  font-size: 15px;
+}
+.viewer-loading p {
+  margin: 0;
+  color: #5f7285;
+  font-size: 13px;
+  font-weight: 600;
+}
+.viewer-loading.is-hidden {
+  display: none;
+}
+.viewer-loading-spinner {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 3px solid #cfe1dd;
+  border-top-color: #0f766e;
+  animation: viewer-spin 1s linear infinite;
+  flex: 0 0 auto;
+}
+.viewer-loading-spinner-lg {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto;
+  border-width: 4px;
+}
+.pdf-pages {
+  display: grid;
+  gap: 16px;
+}
+.pdf-page-card {
+  padding: 14px;
+  border: 1px solid #d7e2ea;
+  border-radius: 16px;
+  background: #f7fafc;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+}
+.pdf-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.pdf-page-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #26475f;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pdf-page-size {
+  font-size: 12px;
+  color: #6a7f92;
+  font-weight: 700;
+}
+.pdf-page-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 24px rgba(16, 32, 45, 0.10);
+}
+.viewer-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%);
+  font-weight: 800;
+  box-shadow: 0 10px 18px rgba(15, 118, 110, 0.18);
+}
+.viewer-download:hover {
+  filter: brightness(1.03);
+}
+
+@keyframes viewer-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 @media (max-width: 768px) {
   .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -441,7 +576,56 @@ th {
   .table-title { font-size: 24px; }
   .search-wrap { min-width: 0; width: 100%; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pdf-frame { height: 68vh; }
+  .viewer-card { padding: 14px; }
+  .pdf-page-card { padding: 10px; }
+  .viewer-loading { align-items: flex-start; }
+  .viewer-download {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .viewer-overlay {
+    padding: 16px;
+  }
+  .viewer-overlay-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+  .viewer-overlay-card strong {
+    font-size: 17px;
+  }
+  .viewer-overlay-card p {
+    font-size: 13px;
+  }
+  .viewer-wrap {
+    padding: 10px;
+  }
+  .viewer-card {
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .viewer-loading {
+    padding: 12px;
+    gap: 12px;
+    border-radius: 12px;
+  }
+  .viewer-loading-spinner {
+    width: 32px;
+    height: 32px;
+  }
+  .pdf-pages {
+    gap: 12px;
+  }
+  .pdf-page-head {
+    margin-bottom: 8px;
+  }
+  .pdf-page-label {
+    font-size: 12px;
+  }
+  .pdf-page-size {
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 1080px) {

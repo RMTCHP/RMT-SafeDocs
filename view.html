@@ -7,14 +7,29 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <div id="viewerOverlay" class="viewer-overlay">
+    <div class="viewer-overlay-card">
+      <div class="viewer-loading-spinner viewer-loading-spinner-lg"></div>
+      <strong id="viewerOverlayTitle">Loading document...</strong>
+      <p id="viewerOverlayText">Preparing PDF data</p>
+    </div>
+  </div>
   <main class="viewer-wrap">
     <section class="card viewer-card">
       <h2 id="docTitle">Loading document...</h2>
       <p id="docMeta" class="muted"></p>
-      <iframe id="pdfViewer" class="pdf-frame" title="PDF Viewer"></iframe>
-      <a id="downloadLink" target="_blank">Download PDF</a>
+      <div id="pdfLoading" class="viewer-loading">
+        <div class="viewer-loading-spinner"></div>
+        <div>
+          <strong id="pdfLoadingTitle">Loading document...</strong>
+          <p id="pdfLoadingText">Preparing PDF data</p>
+        </div>
+      </div>
+      <div id="pdfPages" class="pdf-pages"></div>
+      <a id="downloadLink" target="_blank" class="viewer-download">Download PDF</a>
     </section>
   </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
