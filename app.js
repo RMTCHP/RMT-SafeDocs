@@ -298,28 +298,50 @@ async function initDashboard() {
     const usersRes = await postAction({ action: 'listUsers' });
     closeLoading();
     if (!usersRes.ok) return themedSwal({ icon: 'error', title: 'Error', text: usersRes.error || 'Cannot load users' });
-    const userRows = (usersRes.users || []).map((u) => `<tr><td style="padding:8px;border-top:1px solid #edf1f5">${u.userId}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.username}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.role}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.status}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.createdDate}</td></tr>`).join('');
-    const html = '<div style="text-align:left">' +
-      '<div style="display:flex;gap:8px;margin-bottom:12px">' +
-      '<button id="tabAdd" type="button" style="flex:1;height:44px;display:flex;align-items:center;justify-content:center;padding:0 12px;border-radius:10px;border:2px solid #0f766e;background:#eef8f6;color:#0f766e;font-weight:700;text-align:center;box-sizing:border-box;outline:none">Add User</button>' +
-      '<button id="tabList" type="button" style="flex:1;height:44px;display:flex;align-items:center;justify-content:center;padding:0 12px;border-radius:10px;border:2px solid #d7e2ea;background:#fff;color:#274157;font-weight:700;text-align:center;box-sizing:border-box;outline:none">User List</button>' +
+    const userRows = (usersRes.users || []).map((u) =>
+      `<tr>
+        <td>${u.userId}</td>
+        <td>${u.username}</td>
+        <td><span class="settings-role-pill">${u.role}</span></td>
+        <td><span class="settings-status-pill">${u.status}</span></td>
+        <td>${u.createdDate}</td>
+      </tr>`
+    ).join('');
+    const html = '<div class="settings-modal">' +
+      '<div class="settings-modal-head">' +
+      '<div>' +
+      '<p class="settings-kicker">System Access Control</p>' +
+      '<h3 class="settings-heading">Manage user accounts for SafeDocs</h3>' +
       '</div>' +
-      '<div id="paneAdd" style="min-height:282px;background:#f5fbfa;border:1px solid #d7ebe8;border-radius:12px;padding:12px">' +
-      '<h3 style="margin:0 0 10px;font-size:15px">Add New User</h3>' +
-      '<div style="display:grid;gap:8px">' +
-      '<input id="sw-user" class="swal2-input" placeholder="Username" style="margin:0;width:100%">' +
-      '<input id="sw-pass" class="swal2-input" type="password" placeholder="Password" style="margin:0;width:100%">' +
-      '<select id="sw-role" class="swal2-select" style="margin:0;width:100%"><option value="user">User</option><option value="admin">Admin</option></select>' +
-      '</div></div>' +
-      '<div id="paneList" style="display:none;min-height:282px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 8px">' +
-      '<h3 style="margin:0;font-size:15px">Current Users</h3>' +
-      '<span style="font-size:12px;color:#607080">Total: ' + (usersRes.users || []).length + '</span>' +
+      '<div class="settings-badge">Total Users: ' + (usersRes.users || []).length + '</div>' +
       '</div>' +
-      '<div style="max-height:228px;overflow:auto;border:1px solid #e2e9ef;border-radius:10px">' +
-      '<table style="width:100%;text-align:left;border-collapse:collapse">' +
-      '<thead><tr style="background:#f8fbfd"><th style="padding:8px">ID</th><th style="padding:8px">Username</th><th style="padding:8px">Role</th><th style="padding:8px">Status</th><th style="padding:8px">Created</th></tr></thead>' +
-      '<tbody>' + userRows + '</tbody></table></div></div></div>';
+      '<div class="settings-tabs">' +
+      '<button id="tabAdd" type="button" class="settings-tab is-active">Add User</button>' +
+      '<button id="tabList" type="button" class="settings-tab">User List</button>' +
+      '</div>' +
+      '<div id="paneAdd" class="settings-pane">' +
+      '<section class="settings-card settings-card-accent">' +
+      '<div class="settings-card-head">' +
+      '<span class="settings-card-icon">+</span>' +
+      '<div><h4>Add New User</h4><p>Create credentials and assign access level.</p></div>' +
+      '</div>' +
+      '<div class="settings-form-grid">' +
+      '<label class="settings-field"><span>Username</span><input id="sw-user" class="swal2-input settings-input" placeholder="Enter username"></label>' +
+      '<label class="settings-field"><span>Password</span><input id="sw-pass" class="swal2-input settings-input" type="password" placeholder="Enter password"></label>' +
+      '<label class="settings-field"><span>Role</span><select id="sw-role" class="swal2-select settings-select"><option value="user">User</option><option value="admin">Admin</option></select></label>' +
+      '</div>' +
+      '</section>' +
+      '</div>' +
+      '<div id="paneList" class="settings-pane" style="display:none">' +
+      '<div class="settings-card">' +
+      '<div class="settings-list-head">' +
+      '<div><h4>Current Users</h4><p>Active credentials available in the system.</p></div>' +
+      '<span class="settings-badge">Sheet Records: ' + (usersRes.users || []).length + '</span>' +
+      '</div>' +
+      '<div class="settings-table-wrap">' +
+      '<table class="settings-table">' +
+      '<thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Status</th><th>Created</th></tr></thead>' +
+      '<tbody>' + userRows + '</tbody></table></div></div></div></div>';
     const result = await themedSwal({
       title: 'User Settings',
       width: 920,
@@ -332,22 +354,19 @@ async function initDashboard() {
         const paneAdd = document.getElementById('paneAdd');
         const paneList = document.getElementById('paneList');
         if (!tabAdd || !tabList || !paneAdd || !paneList) return;
-        [tabAdd, tabList].forEach((btn) => {
-          btn.style.outline = 'none';
-          btn.style.boxShadow = 'none';
-        });
+        const activateTab = (showAdd) => {
+          paneAdd.style.display = showAdd ? '' : 'none';
+          paneList.style.display = showAdd ? 'none' : '';
+          tabAdd.classList.toggle('is-active', showAdd);
+          tabList.classList.toggle('is-active', !showAdd);
+        };
         tabAdd.onclick = () => {
-          paneAdd.style.display = '';
-          paneList.style.display = 'none';
-          tabAdd.style.borderColor = '#0f766e'; tabAdd.style.background = '#eef8f6'; tabAdd.style.color = '#0f766e';
-          tabList.style.borderColor = '#d7e2ea'; tabList.style.background = '#fff'; tabList.style.color = '#274157';
+          activateTab(true);
         };
         tabList.onclick = () => {
-          paneAdd.style.display = 'none';
-          paneList.style.display = '';
-          tabList.style.borderColor = '#0f766e'; tabList.style.background = '#eef8f6'; tabList.style.color = '#0f766e';
-          tabAdd.style.borderColor = '#d7e2ea'; tabAdd.style.background = '#fff'; tabAdd.style.color = '#274157';
+          activateTab(false);
         };
+        activateTab(true);
       },
       preConfirm: () => {
         const paneAdd = document.getElementById('paneAdd');
@@ -475,11 +494,24 @@ async function initDashboard() {
         if (act === 'qr' && doc) {
           themedSwal({
             title: 'QR Code - ' + id,
-            width: 420,
-            html: '<div id="sw-qr" style="display:flex;justify-content:center;padding:8px 0"></div><p style="font-size:12px;color:#66798b;margin:8px 0 0;word-break:break-all">' + doc.qrUrl + '</p>',
+            width: 440,
+            html: '<div id="sw-qr" style="display:flex;justify-content:center;padding:8px 0"></div><p style="font-size:12px;color:#66798b;margin:8px 0 12px;word-break:break-all">' + doc.qrUrl + '</p><div style="display:flex;justify-content:center"><button id="btnDownloadQr" type="button" style="padding:10px 14px;border-radius:10px;border:1px solid #d7e2ea;background:#fff;color:#274157;font-weight:700;cursor:pointer">Download QR</button></div>',
             didOpen: () => {
               const node = document.getElementById('sw-qr');
-              if (node) new QRCode(node, { text: doc.qrUrl, width: 220, height: 220 });
+              if (node) {
+                new QRCode(node, { text: doc.qrUrl, width: 220, height: 220 });
+              }
+              const btnDownloadQr = document.getElementById('btnDownloadQr');
+              if (btnDownloadQr) {
+                btnDownloadQr.onclick = () => {
+                  const canvas = node ? node.querySelector('canvas') : null;
+                  if (!canvas) return;
+                  const link = document.createElement('a');
+                  link.href = canvas.toDataURL('image/png');
+                  link.download = id + '-qr.png';
+                  link.click();
+                };
+              }
             }
           });
         }

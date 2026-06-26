@@ -7,15 +7,43 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <main class="center-wrap">
-    <section class="card login-card">
-      <h1>RMT SafeDocs</h1>
-      <p class="muted">Admin Login</p>
+  <main class="login-shell">
+    <section class="login-hero">
+      <div class="login-hero-copy">
+        <p class="login-kicker">Document Control Platform</p>
+        <h1 class="login-title">RMT SafeDocs</h1>
+        <p class="login-description">จัดการเอกสารควบคุมด้วย QR Code แบบคงที่ ให้พนักงานเข้าถึงเวอร์ชันล่าสุดได้ทันทีจากทุกจุดใช้งาน</p>
+      </div>
+      <div class="login-feature-grid">
+        <article class="login-feature-card">
+          <span class="login-feature-label">Static QR</span>
+          <strong>QR เดิม ใช้ต่อได้เสมอ</strong>
+          <p>เปลี่ยน revision ได้โดยไม่ต้องพิมพ์ QR ใหม่ทุกครั้ง</p>
+        </article>
+        <article class="login-feature-card">
+          <span class="login-feature-label">Drive-first</span>
+          <strong>เก็บไฟล์บน Google Drive</strong>
+          <p>เปิดดูเอกสารล่าสุดได้จาก `docId` เดียวกันทุกอุปกรณ์</p>
+        </article>
+        <article class="login-feature-card">
+          <span class="login-feature-label">Revision</span>
+          <strong>ติดตามประวัติย้อนหลัง</strong>
+          <p>เห็นการแทนไฟล์ การแก้ไข และผู้ดำเนินการได้จาก dashboard</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="card login-card login-panel">
+      <div class="login-panel-head">
+        <p class="login-panel-kicker">Admin Access</p>
+        <h2 class="login-panel-title">Sign in to continue</h2>
+        <p class="muted">เข้าสู่ระบบเพื่อจัดการเอกสาร, QR Code และประวัติการแก้ไข</p>
+      </div>
       <form id="loginForm" class="form-stack">
-        <label>Username</label>
-        <input id="username" type="text" required />
-        <label>Password</label>
-        <input id="password" type="password" required />
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username" required />
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required />
         <button type="submit">Login</button>
       </form>
       <p id="loginError" class="error"></p>
