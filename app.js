@@ -1,5 +1,5 @@
-﻿const APP = {
-  apiUrl: 'https://script.google.com/macros/s/AKfycbzrlNJNLb0XYOnNDduUwMl__tSKMNzoaTa8q4wsWAYCdm69JFJhmog3X3eGOf7aJg/exec'
+const APP = {
+  apiUrl: 'https://script.google.com/macros/s/AKfycbxfzwAIoIGLZtbp11jHZPG_B5ifp_weRGcDTHAYCvmSNTbClUcSzgBtAU6FDPQOsA/exec'
 };
 
 async function postAction(payload) {
@@ -83,7 +83,7 @@ function buildHistoryTimelineHtml(doc, history) {
       '<div style="font-size:13px;color:#4c5f73;line-height:1.5">' + (h.remark || h.action || '-') + '</div>' +
       '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#5d7083">' +
       '<div style="width:20px;height:20px;border-radius:999px;background:#1f4b7a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">' + initials + '</div>' +
-      '<span>แก้ไขโดย: ' + userName + '</span>' +
+      '<span>????????: ' + userName + '</span>' +
       '</div>' +
       '</div>' +
       '</div>'
@@ -604,26 +604,49 @@ async function initView() {
   const meta = document.getElementById('docMeta');
   const dl = document.getElementById('downloadLink');
   if (!docId) return (title.textContent = 'Missing docId');
+  let objectUrl = null;
   showLoading('Loading document...');
   const res = await postAction({ action: 'getDocumentByDocId', docId });
-  closeLoading();
-  if (!res.ok) return (title.textContent = res.error || 'Document not found');
+  if (!res.ok) {
+    closeLoading();
+    return (title.textContent = res.error || 'Document not found');
+  }
   const d = res.document;
   title.textContent = d.documentName;
   meta.textContent = `Version ${d.version} | Updated ${d.updatedDate}`;
-  frame.src = d.viewerUrl;
-  dl.href = d.downloadUrl;
+  const fileRes = await postAction({ action: 'getDocumentFile', docId });
+  closeLoading();
+  if (!fileRes.ok || !fileRes.file || !fileRes.file.base64) {
+    frame.removeAttribute('src');
+    return themedSwal({
+      icon: 'error',
+      title: 'Open failed',
+      text: (fileRes && fileRes.error) || 'Cannot load PDF file'
+    });
+  }
+  const fileData = fileRes.file;
+  const binary = atob(fileData.base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: fileData.mimeType || 'application/pdf' });
+  objectUrl = URL.createObjectURL(blob);
+  frame.src = objectUrl;
+  dl.href = objectUrl;
+  dl.download = fileData.fileName || `${d.docId}_v${d.version}.pdf`;
   dl.textContent = `Download ${d.docId} v${d.version}`;
   dl.onclick = () => {
-    if (window.Swal) {
-      themedSwal({
-        title: 'Starting download...',
-        timer: 1200,
-        showConfirmButton: false,
-        didOpen: () => Swal.showLoading()
-      });
-    }
+    themedSwal({
+      title: 'Preparing download...',
+      timer: 900,
+      showConfirmButton: false,
+      didOpen: () => {
+        if (window.Swal) Swal.showLoading();
+      }
+    });
   };
+  window.addEventListener('beforeunload', () => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }, { once: true });
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -631,5 +654,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initDashboard();
   await initView();
 });
+
 
 
