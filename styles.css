@@ -547,18 +547,35 @@ th {
   background: #fff;
   box-shadow: 0 14px 24px rgba(16, 32, 45, 0.10);
 }
+.viewer-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.viewer-open,
 .viewer-download {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 16px;
   min-height: 44px;
   padding: 0 16px;
   border-radius: 12px;
   text-decoration: none;
+  font-weight: 800;
+}
+.viewer-open {
+  color: #173247;
+  background: #fff;
+  border: 1px solid #d7e2ea;
+  box-shadow: 0 10px 18px rgba(16, 32, 45, 0.08);
+}
+.viewer-open:hover {
+  background: #f5f9fc;
+}
+.viewer-download {
   color: #fff;
   background: linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%);
-  font-weight: 800;
   box-shadow: 0 10px 18px rgba(15, 118, 110, 0.18);
 }
 .viewer-download:hover {
@@ -579,6 +596,10 @@ th {
   .viewer-card { padding: 14px; }
   .pdf-page-card { padding: 10px; }
   .viewer-loading { align-items: flex-start; }
+  .viewer-actions {
+    flex-direction: column;
+  }
+  .viewer-open,
   .viewer-download {
     width: 100%;
   }

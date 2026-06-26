@@ -603,6 +603,7 @@ async function initView() {
   const title = document.getElementById('docTitle');
   const meta = document.getElementById('docMeta');
   const dl = document.getElementById('downloadLink');
+  const openLink = document.getElementById('openLink');
   const loading = document.getElementById('pdfLoading');
   const loadingTitle = document.getElementById('pdfLoadingTitle');
   const loadingText = document.getElementById('pdfLoadingText');
@@ -649,6 +650,10 @@ async function initView() {
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   const blob = new Blob([bytes], { type: fileData.mimeType || 'application/pdf' });
   objectUrl = URL.createObjectURL(blob);
+  if (openLink) {
+    openLink.href = objectUrl;
+    openLink.textContent = isMobileViewer ? 'Open Full PDF' : 'Open PDF';
+  }
   dl.href = objectUrl;
   dl.download = fileData.fileName || `${d.docId}_v${d.version}.pdf`;
   dl.textContent = `Download ${d.docId} v${d.version}`;
@@ -681,12 +686,12 @@ async function initView() {
       const baseViewport = page.getViewport({ scale: 1 });
       const availableWidth = Math.max(320, pages.clientWidth - (isMobileViewer ? 20 : 28));
       const fitScale = availableWidth / baseViewport.width;
-      const renderScale = isMobileViewer ? Math.min(fitScale, 1.15) : Math.min(fitScale, 1.35);
+      const renderScale = isMobileViewer ? Math.min(fitScale, 0.82) : Math.min(fitScale, 1.35);
       const viewport = page.getViewport({ scale: renderScale });
       const canvas = document.createElement('canvas');
       canvas.className = 'pdf-page-canvas';
       const context = canvas.getContext('2d');
-      const outputScale = isMobileViewer ? 1.15 : Math.min(window.devicePixelRatio || 1, 1.5);
+      const outputScale = isMobileViewer ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
@@ -699,17 +704,24 @@ async function initView() {
       card.innerHTML = `<div class="pdf-page-head"><span class="pdf-page-label">Page ${pageNumber}</span><span class="pdf-page-size">${Math.round(baseViewport.width)} x ${Math.round(baseViewport.height)}</span></div>`;
       card.appendChild(canvas);
       pages.appendChild(card);
+      if (isMobileViewer) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
     }
   } catch (err) {
     const fallback = document.createElement('div');
     fallback.className = 'pdf-page-card';
-    fallback.innerHTML = '<div class="pdf-page-head"><span class="pdf-page-label">Render failed</span></div><p class="muted">Cannot preview this PDF on this device right now. Please use the download button.</p>';
+    fallback.innerHTML = '<div class="pdf-page-head"><span class="pdf-page-label">Preview limited on this device</span></div><p class="muted">Tap Open Full PDF to use your phone or tablet PDF viewer directly.</p>';
     pages.appendChild(fallback);
-    themedSwal({
-      icon: 'warning',
-      title: 'Preview issue',
-      text: err && err.message ? err.message : 'Cannot render PDF preview'
-    });
+    if (isMobileViewer && openLink) {
+      setTimeout(() => openLink.click(), 250);
+    } else {
+      themedSwal({
+        icon: 'warning',
+        title: 'Preview issue',
+        text: err && err.message ? err.message : 'Cannot render PDF preview'
+      });
+    }
   }
   clearViewerLoading();
   window.addEventListener('beforeunload', () => {
