@@ -18,8 +18,38 @@
     </div>
   </header>
   <main class="container">
+    <section class="summary-grid">
+      <article class="summary-card summary-clickable is-active" data-filter="all">
+        <p class="summary-label">เอกสารทั้งหมด</p>
+        <p id="sumTotal" class="summary-value">0</p>
+      </article>
+      <article class="summary-card summary-clickable" data-filter="today">
+        <p class="summary-label">อัปเดตวันนี้</p>
+        <p id="sumToday" class="summary-value">0</p>
+      </article>
+      <article class="summary-card summary-clickable" data-filter="week">
+        <p class="summary-label">อัปเดตใน 7 วัน</p>
+        <p id="sumWeek" class="summary-value">0</p>
+      </article>
+      <article class="summary-card">
+        <p class="summary-label">เวอร์ชันเฉลี่ย</p>
+        <p id="sumAvgVersion" class="summary-value">0.0</p>
+      </article>
+    </section>
     <section class="card">
-      <input id="searchBox" type="text" placeholder="Search DocID / Document Name" />
+      <div class="table-head">
+        <div class="table-head-text">
+          <h3 class="table-title">Document List</h3>
+          <p class="table-subtitle">ค้นหาและจัดการเอกสารล่าสุดจากระบบ SafeDocs</p>
+        </div>
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+          </span>
+          <input id="searchBox" type="text" placeholder="Search by DocID or Document Name" />
+          <button id="btnClearSearch" class="ghost search-clear" type="button">Clear</button>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>DocID</th><th>Document Name</th><th>Version</th><th>Updated</th><th>QR</th><th>Actions</th></tr></thead>

@@ -1,5 +1,5 @@
 ﻿const APP = {
-  apiUrl: 'https://script.google.com/macros/s/AKfycbyk-9Kb18chQJMRdsXcePUDVQdRhwx5AnmJw2WWP57V71GyxCt2sUzDrKggMFAKfwI/exec'
+  apiUrl: 'https://script.google.com/macros/s/AKfycbzrlNJNLb0XYOnNDduUwMl__tSKMNzoaTa8q4wsWAYCdm69JFJhmog3X3eGOf7aJg/exec'
 };
 
 async function postAction(payload) {
@@ -102,6 +102,50 @@ function buildHistoryTimelineHtml(doc, history) {
   );
 }
 
+function parseDateTimeSafe(dateText) {
+  if (!dateText) return null;
+  const isoLike = String(dateText).replace(' ', 'T');
+  const d = new Date(isoLike);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function isSameLocalDate(a, b) {
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+}
+
+function updateSummaryCards(docs) {
+  const totalEl = document.getElementById('sumTotal');
+  const todayEl = document.getElementById('sumToday');
+  const weekEl = document.getElementById('sumWeek');
+  const avgEl = document.getElementById('sumAvgVersion');
+  if (!totalEl || !todayEl || !weekEl || !avgEl) return;
+
+  const all = Array.isArray(docs) ? docs : [];
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+  let todayCount = 0;
+  let weekCount = 0;
+  let versionSum = 0;
+
+  all.forEach((d) => {
+    const dt = parseDateTimeSafe(d.updatedDate);
+    if (dt && isSameLocalDate(dt, now)) todayCount += 1;
+    if (dt && dt >= sevenDaysAgo) weekCount += 1;
+    versionSum += Number(d.version || 0);
+  });
+
+  const avgVersion = all.length ? (versionSum / all.length) : 0;
+  totalEl.textContent = String(all.length);
+  todayEl.textContent = String(todayCount);
+  weekEl.textContent = String(weekCount);
+  avgEl.textContent = avgVersion.toFixed(1);
+}
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -179,10 +223,13 @@ async function initDashboard() {
   if (!requireSession()) return;
   const body = document.getElementById('docTableBody');
   const searchBox = document.getElementById('searchBox');
+  const btnClearSearch = document.getElementById('btnClearSearch');
   const btnAdd = document.getElementById('btnAdd');
   const btnSettings = document.getElementById('btnSettings');
   const btnLogout = document.getElementById('btnLogout');
+  const summaryCards = Array.from(document.querySelectorAll('.summary-clickable'));
   let docs = [];
+  let activeSummaryFilter = 'all';
 
   btnLogout.onclick = async () => {
     const result = await themedSwal({
@@ -253,32 +300,70 @@ async function initDashboard() {
     if (!usersRes.ok) return themedSwal({ icon: 'error', title: 'Error', text: usersRes.error || 'Cannot load users' });
     const userRows = (usersRes.users || []).map((u) => `<tr><td style="padding:8px;border-top:1px solid #edf1f5">${u.userId}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.username}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.role}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.status}</td><td style="padding:8px;border-top:1px solid #edf1f5">${u.createdDate}</td></tr>`).join('');
     const html = '<div style="text-align:left">' +
-      '<div style="background:#f5fbfa;border:1px solid #d7ebe8;border-radius:12px;padding:12px;margin-bottom:12px">' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px">' +
+      '<button id="tabAdd" type="button" style="flex:1;height:44px;display:flex;align-items:center;justify-content:center;padding:0 12px;border-radius:10px;border:2px solid #0f766e;background:#eef8f6;color:#0f766e;font-weight:700;text-align:center;box-sizing:border-box;outline:none">Add User</button>' +
+      '<button id="tabList" type="button" style="flex:1;height:44px;display:flex;align-items:center;justify-content:center;padding:0 12px;border-radius:10px;border:2px solid #d7e2ea;background:#fff;color:#274157;font-weight:700;text-align:center;box-sizing:border-box;outline:none">User List</button>' +
+      '</div>' +
+      '<div id="paneAdd" style="min-height:282px;background:#f5fbfa;border:1px solid #d7ebe8;border-radius:12px;padding:12px">' +
       '<h3 style="margin:0 0 10px;font-size:15px">Add New User</h3>' +
       '<div style="display:grid;gap:8px">' +
       '<input id="sw-user" class="swal2-input" placeholder="Username" style="margin:0;width:100%">' +
       '<input id="sw-pass" class="swal2-input" type="password" placeholder="Password" style="margin:0;width:100%">' +
       '<select id="sw-role" class="swal2-select" style="margin:0;width:100%"><option value="user">User</option><option value="admin">Admin</option></select>' +
       '</div></div>' +
+      '<div id="paneList" style="display:none;min-height:282px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 8px">' +
       '<h3 style="margin:0;font-size:15px">Current Users</h3>' +
       '<span style="font-size:12px;color:#607080">Total: ' + (usersRes.users || []).length + '</span>' +
       '</div>' +
-      '<div style="max-height:280px;overflow:auto;border:1px solid #e2e9ef;border-radius:10px">' +
+      '<div style="max-height:228px;overflow:auto;border:1px solid #e2e9ef;border-radius:10px">' +
       '<table style="width:100%;text-align:left;border-collapse:collapse">' +
       '<thead><tr style="background:#f8fbfd"><th style="padding:8px">ID</th><th style="padding:8px">Username</th><th style="padding:8px">Role</th><th style="padding:8px">Status</th><th style="padding:8px">Created</th></tr></thead>' +
-      '<tbody>' + userRows + '</tbody></table></div></div>';
-    const result = await themedSwal({ title: 'User Settings', width: 920, html, showCancelButton: true, confirmButtonText: 'Add User', preConfirm: () => {
-      const username = document.getElementById('sw-user').value.trim();
-      const password = document.getElementById('sw-pass').value.trim();
-      const role = document.getElementById('sw-role').value;
-      if (!username || !password) {
-        Swal.showValidationMessage('Please fill username and password');
-        return false;
+      '<tbody>' + userRows + '</tbody></table></div></div></div>';
+    const result = await themedSwal({
+      title: 'User Settings',
+      width: 920,
+      html,
+      showCancelButton: true,
+      confirmButtonText: 'Add User',
+      didOpen: () => {
+        const tabAdd = document.getElementById('tabAdd');
+        const tabList = document.getElementById('tabList');
+        const paneAdd = document.getElementById('paneAdd');
+        const paneList = document.getElementById('paneList');
+        if (!tabAdd || !tabList || !paneAdd || !paneList) return;
+        [tabAdd, tabList].forEach((btn) => {
+          btn.style.outline = 'none';
+          btn.style.boxShadow = 'none';
+        });
+        tabAdd.onclick = () => {
+          paneAdd.style.display = '';
+          paneList.style.display = 'none';
+          tabAdd.style.borderColor = '#0f766e'; tabAdd.style.background = '#eef8f6'; tabAdd.style.color = '#0f766e';
+          tabList.style.borderColor = '#d7e2ea'; tabList.style.background = '#fff'; tabList.style.color = '#274157';
+        };
+        tabList.onclick = () => {
+          paneAdd.style.display = 'none';
+          paneList.style.display = '';
+          tabList.style.borderColor = '#0f766e'; tabList.style.background = '#eef8f6'; tabList.style.color = '#0f766e';
+          tabAdd.style.borderColor = '#d7e2ea'; tabAdd.style.background = '#fff'; tabAdd.style.color = '#274157';
+        };
+      },
+      preConfirm: () => {
+        const paneAdd = document.getElementById('paneAdd');
+        if (paneAdd && paneAdd.style.display === 'none') return false;
+        const username = document.getElementById('sw-user').value.trim();
+        const password = document.getElementById('sw-pass').value.trim();
+        const role = document.getElementById('sw-role').value;
+        if (!username || !password) {
+          Swal.showValidationMessage('Please fill username and password');
+          return false;
+        }
+        return { username, password, role };
       }
-      return { username, password, role };
-    }});
+    });
     if (!result.isConfirmed) return;
+    if (!result.value) return;
     const addRes = await postAction({ action: 'addUser', actor: localStorage.getItem('rmt_actor') || 'admin', username: result.value.username, password: result.value.password, role: result.value.role });
     if (!addRes.ok) return themedSwal({ icon: 'error', title: 'Error', text: addRes.error || 'Cannot add user' });
     themedSwal({ icon: 'success', title: 'Success', text: 'User created: ' + addRes.username });
@@ -406,20 +491,74 @@ async function initDashboard() {
     });
   }
 
+  function docsBySummaryFilter(list, key) {
+    const all = Array.isArray(list) ? list : [];
+    if (key === 'all') return all;
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    if (key === 'today') {
+      return all.filter((d) => {
+        const dt = parseDateTimeSafe(d.updatedDate);
+        return dt ? isSameLocalDate(dt, now) : false;
+      });
+    }
+    if (key === 'week') {
+      return all.filter((d) => {
+        const dt = parseDateTimeSafe(d.updatedDate);
+        return dt ? dt >= sevenDaysAgo : false;
+      });
+    }
+    return all;
+  }
+
+  function setActiveSummaryCard(key) {
+    summaryCards.forEach((card) => {
+      const cardKey = card.getAttribute('data-filter');
+      card.classList.toggle('is-active', cardKey === key);
+    });
+  }
+
+  function applyFilters() {
+    const q = searchBox.value.toLowerCase().trim();
+    const bySummary = docsBySummaryFilter(docs, activeSummaryFilter);
+    if (!q) {
+      render(bySummary);
+      return;
+    }
+    render(bySummary.filter((d) =>
+      String(d.docId).toLowerCase().includes(q) ||
+      String(d.documentName).toLowerCase().includes(q)
+    ));
+  }
+
   async function loadDocuments() {
     showLoading('Loading documents...');
     const res = await postAction({ action: 'listDocuments' });
     closeLoading();
     if (!res.ok) return themedSwal({ icon: 'error', title: 'Error', text: res.error || 'Cannot load documents' });
     docs = res.documents || [];
-    render(docs);
+    updateSummaryCards(docs);
+    applyFilters();
   }
 
-  searchBox.oninput = () => {
-    const q = searchBox.value.toLowerCase().trim();
-    if (!q) return render(docs);
-    render(docs.filter((d) => String(d.docId).toLowerCase().includes(q) || String(d.documentName).toLowerCase().includes(q)));
-  };
+  summaryCards.forEach((card) => {
+    card.onclick = () => {
+      activeSummaryFilter = card.getAttribute('data-filter') || 'all';
+      setActiveSummaryCard(activeSummaryFilter);
+      applyFilters();
+    };
+  });
+
+  searchBox.oninput = () => applyFilters();
+  if (btnClearSearch) {
+    btnClearSearch.onclick = () => {
+      searchBox.value = '';
+      applyFilters();
+      searchBox.focus();
+    };
+  }
 
   await loadDocuments();
 }
@@ -438,7 +577,7 @@ async function initView() {
   closeLoading();
   if (!res.ok) return (title.textContent = res.error || 'Document not found');
   const d = res.document;
-  title.textContent = `${d.documentName} (${d.docId})`;
+  title.textContent = d.documentName;
   meta.textContent = `Version ${d.version} | Updated ${d.updatedDate}`;
   frame.src = d.viewerUrl;
   dl.href = d.downloadUrl;
