@@ -5,48 +5,82 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RMT SafeDocs - Login</title>
   <link rel="stylesheet" href="./styles.css" />
+  <style>
+    :root { --sd-ink:#f7fbff; --sd-muted:#b7c9d5; --sd-line:rgba(227,243,249,.17); --sd-purple:#a78bfa; }
+    .safedocs-login-page { min-height:100vh; margin:0; color:var(--sd-ink); background:radial-gradient(circle at 82% 18%,rgba(125,94,214,.22),transparent 30rem),linear-gradient(126deg,rgba(5,20,33,.91),rgba(8,49,62,.72)),url("./assets/background.png") center/cover no-repeat fixed; }
+    .sd-topbar { min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:14px max(30px,env(safe-area-inset-right)) 14px max(30px,env(safe-area-inset-left)); border-bottom:1px solid var(--sd-line); background:rgba(7,22,34,.68); backdrop-filter:blur(18px); }
+    .sd-brand { display:flex; align-items:center; gap:13px; min-width:0; }
+    .sd-brand-icon { width:38px; height:38px; display:grid; place-items:center; flex:0 0 auto; border:1px solid rgba(210,190,255,.25); border-radius:13px; color:#e9deff; background:linear-gradient(145deg,#be9cff,#7651d5); box-shadow:0 10px 22px rgba(104,74,194,.28),inset 0 1px 0 rgba(255,255,255,.32); }
+    .sd-brand-icon svg,.sd-feature-icon svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.85; stroke-linecap:round; stroke-linejoin:round; }
+    .sd-brand-copy { min-width:0; }
+    .sd-brand-copy strong { display:block; color:#fff; font-size:15px; font-weight:800; line-height:1.2; }
+    .sd-brand-copy span { display:block; margin-top:3px; color:#a7bdc9; font-size:11px; font-weight:700; letter-spacing:.10em; text-transform:uppercase; }
+    .sd-logo { width:auto; height:28px; object-fit:contain; }
+    .sd-workspace { min-height:calc(100vh - 76px); display:grid; place-items:center; padding:34px max(24px,env(safe-area-inset-right)) 42px max(24px,env(safe-area-inset-left)); }
+    .sd-panel { width:min(1000px,100%); display:grid; grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr); overflow:hidden; border:1px solid var(--sd-line); border-radius:29px; background:linear-gradient(145deg,rgba(17,51,66,.84),rgba(8,26,39,.71)); box-shadow:0 30px 80px rgba(1,13,23,.34),inset 0 1px 0 rgba(255,255,255,.07); backdrop-filter:blur(18px); }
+    .sd-intro { position:relative; padding:clamp(30px,5vw,56px); border-right:1px solid var(--sd-line); overflow:hidden; }
+    .sd-intro::after { content:""; position:absolute; width:270px; height:270px; right:-110px; bottom:-145px; border:1px solid rgba(197,180,255,.18); border-radius:99px; box-shadow:0 0 0 44px rgba(197,180,255,.035),0 0 0 88px rgba(197,180,255,.025); pointer-events:none; }
+    .sd-kicker { display:flex; align-items:center; gap:9px; margin:0 0 14px; color:#bfcee0; font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+    .sd-kicker::before { content:""; width:24px; height:1px; background:var(--sd-purple); }
+    .sd-title { max-width:470px; margin:0; color:#fff; font-size:clamp(39px,5vw,58px); font-weight:800; line-height:.98; letter-spacing:-.045em; }
+    .sd-title span { color:#c7b3ff; }
+    .sd-description { max-width:500px; margin:18px 0 0; color:var(--sd-muted); font-size:15px; font-weight:600; line-height:1.7; }
+    .sd-features { display:grid; gap:11px; margin-top:31px; }
+    .sd-feature { display:flex; align-items:center; gap:12px; padding:11px 13px; border:1px solid rgba(229,243,249,.12); border-radius:14px; background:rgba(255,255,255,.055); }
+    .sd-feature-icon { width:32px; height:32px; display:grid; place-items:center; flex:0 0 auto; border-radius:10px; color:#e9deff; background:rgba(167,139,250,.18); }
+    .sd-feature-icon svg { width:17px; height:17px; }
+    .sd-feature span:last-child { color:#dce8ee; font-size:12px; font-weight:700; line-height:1.4; }
+    .sd-access { display:flex; flex-direction:column; justify-content:center; padding:clamp(28px,4vw,44px); background:rgba(4,20,31,.22); }
+    .sd-access-kicker { margin:0 0 8px; color:#c7b3ff; font-size:11px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+    .sd-access h2 { margin:0; color:#fff; font-size:30px; font-weight:800; letter-spacing:-.03em; }
+    .sd-access .muted { margin:10px 0 23px; color:var(--sd-muted); font-size:13px; line-height:1.55; }
+    .sd-access .form-stack { gap:9px; }
+    .sd-access label { color:#d9e6ec; font-size:12px; font-weight:800; }
+    .sd-access input { min-height:48px; padding:0 13px; border:1px solid rgba(210,228,237,.18); border-radius:12px; color:#fff; background:rgba(255,255,255,.08); box-shadow:none; }
+    .sd-access input:focus { border-color:#bca5fb; box-shadow:0 0 0 3px rgba(167,139,250,.18); }
+    .sd-access button { min-height:49px; margin-top:7px; border-radius:12px; background:linear-gradient(145deg,#c3a3ff,#7550d4); box-shadow:0 12px 22px rgba(104,74,194,.28); }
+    .sd-access button:hover { filter:brightness(1.05); transform:translateY(-1px); }
+    .sd-access .error { margin:13px 0 0; color:#ffc2c2; font-size:12px; }
+    .sd-access-note { margin:22px 0 0; color:rgba(197,215,223,.64); font-size:10px; font-weight:700; letter-spacing:.05em; text-align:center; text-transform:uppercase; }
+    @media (max-width:850px) { .safedocs-login-page { background-attachment:scroll; } .sd-panel { grid-template-columns:1fr; max-width:620px; } .sd-intro { border-right:0; border-bottom:1px solid var(--sd-line); } .sd-intro::after { display:none; } .sd-access { min-height:400px; } }
+    @media (max-width:560px) { .sd-topbar { min-height:67px; padding:12px max(18px,env(safe-area-inset-right)) 12px max(18px,env(safe-area-inset-left)); } .sd-brand-icon { width:34px; height:34px; border-radius:11px; } .sd-brand-copy strong { font-size:13px; } .sd-brand-copy span { font-size:9px; } .sd-logo { height:22px; } .sd-workspace { min-height:calc(100vh - 67px); padding:20px 16px 30px; } .sd-panel { border-radius:23px; } .sd-intro,.sd-access { padding:26px 21px; } .sd-title { font-size:40px; } .sd-description { font-size:13px; } .sd-features { margin-top:24px; } .sd-access h2 { font-size:27px; } }
+  </style>
 </head>
-<body>
-  <main class="login-shell">
-    <section class="login-hero">
-      <div class="login-hero-copy">
-        <p class="login-kicker">Document Control Platform</p>
-        <h1 class="login-title">RMT SafeDocs</h1>
-        <p class="login-description">จัดการเอกสารควบคุมด้วย QR Code แบบคงที่ ให้พนักงานเข้าถึงเวอร์ชันล่าสุดได้ทันทีจากทุกจุดใช้งาน</p>
-      </div>
-      <div class="login-feature-grid">
-        <article class="login-feature-card">
-          <span class="login-feature-label">Static QR</span>
-          <strong>QR เดิม ใช้ต่อได้เสมอ</strong>
-          <p>เปลี่ยน revision ได้โดยไม่ต้องพิมพ์ QR ใหม่ทุกครั้ง</p>
-        </article>
-        <article class="login-feature-card">
-          <span class="login-feature-label">Drive-first</span>
-          <strong>เก็บไฟล์บน Google Drive</strong>
-          <p>เปิดดูเอกสารล่าสุดได้จาก `docId` เดียวกันทุกอุปกรณ์</p>
-        </article>
-        <article class="login-feature-card">
-          <span class="login-feature-label">Revision</span>
-          <strong>ติดตามประวัติย้อนหลัง</strong>
-          <p>เห็นการแทนไฟล์ การแก้ไข และผู้ดำเนินการได้จาก dashboard</p>
-        </article>
-      </div>
-    </section>
+<body class="safedocs-login-page">
+  <header class="sd-topbar">
+    <div class="sd-brand">
+      <span class="sd-brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7Z"/><path d="M14 3v5h5"/><path d="m10 15 1.8 1.8L15.5 13"/></svg></span>
+      <span class="sd-brand-copy"><strong>RMT SafeDocs</strong><span>Document Control Platform</span></span>
+    </div>
+    <img class="sd-logo" src="./assets/logo.png" alt="Resonac logo" />
+  </header>
 
-    <section class="card login-card login-panel">
-      <div class="login-panel-head">
-        <p class="login-panel-kicker">Admin Access</p>
-        <h2 class="login-panel-title">Sign in to continue</h2>
-        <p class="muted">เข้าสู่ระบบเพื่อจัดการเอกสาร, QR Code และประวัติการแก้ไข</p>
-      </div>
-      <form id="loginForm" class="form-stack">
-        <label for="username">Username</label>
-        <input id="username" type="text" autocomplete="username" required />
-        <label for="password">Password</label>
-        <input id="password" type="password" autocomplete="current-password" required />
-        <button type="submit">Login</button>
-      </form>
-      <p id="loginError" class="error"></p>
+  <main class="sd-workspace">
+    <section class="sd-panel">
+      <section class="sd-intro" aria-labelledby="safe-docs-title">
+        <p class="sd-kicker">Safety &amp; Environment</p>
+        <h1 id="safe-docs-title" class="sd-title">Document <span>Control</span><br />Workspace</h1>
+        <p class="sd-description">จัดการเอกสารควบคุมด้วย QR Code แบบคงที่ เพื่อให้พนักงานเข้าถึงเวอร์ชันล่าสุดได้อย่างรวดเร็วจากทุกจุดใช้งาน</p>
+        <div class="sd-features">
+          <div class="sd-feature"><span class="sd-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/><path d="M7 3v6M17 3v6M7 15v6M17 15v6"/></svg></span><span>Static QR Code for latest document access</span></div>
+          <div class="sd-feature"><span class="sd-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 7 3v5c0 5-3.2 8.9-7 10-3.8-1.1-7-5-7-10V6l7-3Z"/><path d="m9.5 12 1.8 1.8L15 10.2"/></svg></span><span>Controlled revision history and version tracking</span></div>
+        </div>
+      </section>
+
+      <section class="sd-access" aria-labelledby="login-title">
+        <p class="sd-access-kicker">Admin Access</p>
+        <h2 id="login-title">Sign in to continue</h2>
+        <p class="muted">เข้าสู่ระบบเพื่อจัดการเอกสาร QR Code และประวัติการแก้ไข</p>
+        <form id="loginForm" class="form-stack">
+          <label for="username">Username</label>
+          <input id="username" type="text" autocomplete="username" required />
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required />
+          <button type="submit">Login</button>
+        </form>
+        <p id="loginError" class="error"></p>
+        <p class="sd-access-note">Authorized personnel only</p>
+      </section>
     </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

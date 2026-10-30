@@ -22,8 +22,8 @@ function themedSwal(options) {
   };
   const mergedCustomClass = Object.assign({}, baseCustomClass, (options && options.customClass) || {});
   const defaults = {
-    background: '#ffffff',
-    color: '#132433',
+    background: '#102535',
+    color: '#f5fbff',
     buttonsStyling: false,
     customClass: mergedCustomClass
   };
@@ -58,7 +58,7 @@ function buildHistoryTimelineHtml(doc, history) {
   const docId = doc && doc.docId ? doc.docId : '-';
   const docName = doc && doc.documentName ? doc.documentName : docId;
   if (!history || history.length === 0) {
-    return '<div style="padding:16px;border:1px solid #e2e9ef;border-radius:12px;background:#fff">No revision history</div>';
+    return '<div class="history-empty">No revision history</div>';
   }
 
   const latestVersion = Math.max.apply(null, history.map((h) => Number(h.newVersion || 0)));
@@ -67,38 +67,34 @@ function buildHistoryTimelineHtml(doc, history) {
     const isLatest = version === latestVersion;
     const userName = String(h.actionBy || '-');
     const initials = userName ? userName.substring(0, 1).toUpperCase() : '?';
-    const bg = isLatest ? '#eef6f4' : '#ffffff';
-    const border = isLatest ? '#bfe0d8' : '#dbe3ea';
-    const badgeBg = isLatest ? '#0f766e' : '#eef2f6';
-    const badgeColor = isLatest ? '#ffffff' : '#4a5c6f';
     return (
-      '<div style="position:relative;padding-left:34px;margin-bottom:14px">' +
-      '<div style="position:absolute;left:0;top:2px;width:18px;height:18px;border-radius:999px;background:' + (isLatest ? '#0f766e' : '#fff') + ';border:2px solid ' + (isLatest ? '#0f766e' : '#b8c4cf') + ';"></div>' +
-      (idx < history.length - 1 ? '<div style="position:absolute;left:8px;top:22px;width:2px;height:calc(100% + 8px);background:#dbe3ea;"></div>' : '') +
-      '<div style="border:1px solid ' + border + ';background:' + bg + ';border-radius:12px;padding:12px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">' +
-      '<span style="font-weight:700;color:#1f3447">' + (h.actionDate || '-') + '</span>' +
-      '<span style="font-size:12px;padding:3px 8px;border-radius:999px;background:' + badgeBg + ';color:' + badgeColor + '">v' + version + (isLatest ? ' (latest)' : '') + '</span>' +
+      '<article class="history-item' + (isLatest ? ' is-latest' : '') + '">' +
+      '<span class="history-marker"></span>' +
+      (idx < history.length - 1 ? '<span class="history-line"></span>' : '') +
+      '<div class="history-card">' +
+      '<div class="history-card-head">' +
+      '<span class="history-date">' + (h.actionDate || '-') + '</span>' +
+      '<span class="history-version">v' + version + (isLatest ? ' Latest' : '') + '</span>' +
       '</div>' +
-      '<div style="font-size:13px;color:#4c5f73;line-height:1.5">' + (h.remark || h.action || '-') + '</div>' +
-      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#5d7083">' +
-      '<div style="width:20px;height:20px;border-radius:999px;background:#1f4b7a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">' + initials + '</div>' +
-      '<span>????????: ' + userName + '</span>' +
+      '<div class="history-remark">' + (h.remark || h.action || '-') + '</div>' +
+      '<div class="history-author">' +
+      '<span class="history-avatar">' + initials + '</span>' +
+      '<span>Updated by: ' + userName + '</span>' +
       '</div>' +
       '</div>' +
-      '</div>'
+      '</article>'
     );
   }).join('');
 
   return (
-    '<div style="text-align:left">' +
-    '<div style="margin-bottom:10px;padding:10px 12px;border:1px solid #dbe3ea;background:#f5f8fb;border-radius:10px;">' +
-    '<div style="font-size:13px;color:#5c7185">Document</div>' +
-    '<div style="font-weight:800;color:#12273a;font-size:15px">' + docName + '</div>' +
-    '<div style="font-size:12px;color:#72869a;margin-top:2px">ID: ' + docId + '</div>' +
+    '<section class="history-modal">' +
+    '<div class="history-document">' +
+    '<span>Document</span>' +
+    '<strong>' + docName + '</strong>' +
+    '<small>ID: ' + docId + '</small>' +
     '</div>' +
-    '<div style="max-height:420px;overflow:auto;padding-right:4px">' + nodes + '</div>' +
-    '</div>'
+    '<div class="history-list">' + nodes + '</div>' +
+    '</section>'
   );
 }
 
@@ -227,9 +223,12 @@ async function initDashboard() {
   const btnAdd = document.getElementById('btnAdd');
   const btnSettings = document.getElementById('btnSettings');
   const btnLogout = document.getElementById('btnLogout');
+  const documentPagination = document.getElementById('documentPagination');
   const summaryCards = Array.from(document.querySelectorAll('.summary-clickable'));
+  const pageSize = 20;
   let docs = [];
   let activeSummaryFilter = 'all';
+  let currentPage = 1;
 
   btnLogout.onclick = async () => {
     const result = await themedSwal({
@@ -238,7 +237,8 @@ async function initDashboard() {
       text: 'You are about to sign out from this session.',
       showCancelButton: true,
       confirmButtonText: 'Logout',
-      cancelButtonText: 'Cancel'
+      cancelButtonText: 'Cancel',
+      customClass: { confirmButton: 'rmt-swal-confirm rmt-swal-danger-confirm' }
     });
     if (!result.isConfirmed) return;
     localStorage.removeItem('rmt_token');
@@ -251,20 +251,13 @@ async function initDashboard() {
       title: 'Add New Document',
       width: 760,
       html:
-        '<div style="text-align:left">' +
-        '<p style="margin:0 0 12px;color:#5f6f7f;font-size:13px">Upload a controlled PDF document to Google Drive and generate a static QR code.</p>' +
-        '<div style="display:grid;gap:12px">' +
-        '<div>' +
-        '<label style="display:block;margin-bottom:6px;font-weight:700;color:#1f3447">Document Name</label>' +
-        '<input id="sw-name" class="swal2-input" placeholder="e.g. Safety Manual - Line A" style="margin:0;width:100%">' +
+        '<section class="document-form-modal">' +
+        '<p class="document-form-intro">Upload a controlled PDF document to Google Drive and generate a static QR code.</p>' +
+        '<div class="document-form-fields">' +
+        '<label class="document-form-field"><span>Document Name</span><input id="sw-name" class="swal2-input" placeholder="e.g. Safety Manual - Line A"></label>' +
+        '<label class="document-upload-zone"><span>PDF File</span><input id="sw-file" class="swal2-file" type="file" accept=\"application/pdf\"><small>Allowed type: PDF, max size: 25 MB</small></label>' +
         '</div>' +
-        '<div style="border:1px dashed #aac6cf;border-radius:12px;background:#f7fcfb;padding:14px">' +
-        '<label style="display:block;margin-bottom:8px;font-weight:700;color:#1f3447">PDF File</label>' +
-        '<input id="sw-file" class="swal2-file" type="file" accept=\"application/pdf\" style="margin:0;width:100%">' +
-        '<p style="margin:8px 0 0;color:#688092;font-size:12px">Allowed type: PDF, max size: 25 MB</p>' +
-        '</div>' +
-        '</div>' +
-        '</div>',
+        '</section>',
       showCancelButton: true,
       confirmButtonText: 'Upload Document',
       cancelButtonText: 'Cancel',
@@ -298,94 +291,139 @@ async function initDashboard() {
     const usersRes = await postAction({ action: 'listUsers' });
     closeLoading();
     if (!usersRes.ok) return themedSwal({ icon: 'error', title: 'Error', text: usersRes.error || 'Cannot load users' });
-    const userRows = (usersRes.users || []).map((u) =>
-      `<tr>
-        <td>${u.userId}</td>
-        <td>${u.username}</td>
-        <td><span class="settings-role-pill">${u.role}</span></td>
-        <td><span class="settings-status-pill">${u.status}</span></td>
-        <td>${u.createdDate}</td>
-      </tr>`
-    ).join('');
-    const html = '<div class="settings-modal">' +
-      '<div class="settings-modal-head">' +
-      '<div>' +
-      '<p class="settings-kicker">System Access Control</p>' +
-      '<h3 class="settings-heading">Manage user accounts for SafeDocs</h3>' +
-      '</div>' +
-      '<div class="settings-badge">Total Users: ' + (usersRes.users || []).length + '</div>' +
-      '</div>' +
-      '<div class="settings-tabs">' +
-      '<button id="tabAdd" type="button" class="settings-tab is-active">Add User</button>' +
-      '<button id="tabList" type="button" class="settings-tab">User List</button>' +
-      '</div>' +
-      '<div id="paneAdd" class="settings-pane">' +
-      '<section class="settings-card settings-card-accent">' +
-      '<div class="settings-card-head">' +
-      '<span class="settings-card-icon">+</span>' +
-      '<div><h4>Add New User</h4><p>Create credentials and assign access level.</p></div>' +
-      '</div>' +
-      '<div class="settings-form-grid">' +
-      '<label class="settings-field"><span>Username</span><input id="sw-user" class="swal2-input settings-input" placeholder="Enter username"></label>' +
-      '<label class="settings-field"><span>Password</span><input id="sw-pass" class="swal2-input settings-input" type="password" placeholder="Enter password"></label>' +
-      '<label class="settings-field"><span>Role</span><select id="sw-role" class="swal2-select settings-select"><option value="user">User</option><option value="admin">Admin</option></select></label>' +
-      '</div>' +
+    let users = usersRes.users || [];
+    let notice = '';
+    const modalHeader = () =>
+      '<header class="user-admin-header">' +
+      '<div><p class="user-admin-kicker">System Access</p><h3>User Management</h3><p>Manage system access and user accounts</p></div>' +
+      '<button id="userAdminClose" class="user-admin-close" type="button" aria-label="Close user management">&times;</button>' +
+      '</header>';
+    const listRows = () => users.map((u) =>
+      '<tr class="user-admin-row" data-user-row="' + u.username.toLowerCase() + '">' +
+      '<td><div class="user-admin-identity"><strong>' + u.username + '</strong><span>' + u.userId + '</span></div></td>' +
+      '<td><span class="settings-role-pill">' + u.role + '</span></td>' +
+      '<td><span class="settings-status-pill">' + u.status + '</span></td>' +
+      '<td><button class="user-admin-detail-btn" type="button" data-user-detail="' + u.userId + '">Details</button></td>' +
+      '</tr>' +
+      '<tr class="user-admin-detail-row" data-user-detail-row="' + u.userId + '" hidden><td colspan="4"><div><span>Created</span><strong>' + u.createdDate + '</strong><span>Created by</span><strong>' + (u.createdBy || '-') + '</strong></div></td></tr>'
+    ).join('') || '<tr><td class="user-admin-empty" colspan="4">No user accounts found.</td></tr>';
+    const listView = () =>
+      modalHeader() +
+      '<section class="user-admin-toolbar">' +
+      '<span class="settings-badge">' + users.length + ' Users</span>' +
+      '<label class="user-admin-search"><span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></span><input id="userAdminSearch" type="search" placeholder="Search username"></label>' +
+      '<button id="userAdminAdd" class="user-admin-primary" type="button">+ Add User</button>' +
       '</section>' +
-      '</div>' +
-      '<div id="paneList" class="settings-pane" style="display:none">' +
-      '<div class="settings-card">' +
-      '<div class="settings-list-head">' +
-      '<div><h4>Current Users</h4><p>Active credentials available in the system.</p></div>' +
-      '<span class="settings-badge">Sheet Records: ' + (usersRes.users || []).length + '</span>' +
-      '</div>' +
-      '<div class="settings-table-wrap">' +
-      '<table class="settings-table">' +
-      '<thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Status</th><th>Created</th></tr></thead>' +
-      '<tbody>' + userRows + '</tbody></table></div></div></div></div>';
-    const result = await themedSwal({
-      title: 'User Settings',
-      width: 920,
-      html,
-      showCancelButton: true,
-      confirmButtonText: 'Add User',
-      didOpen: () => {
-        const tabAdd = document.getElementById('tabAdd');
-        const tabList = document.getElementById('tabList');
-        const paneAdd = document.getElementById('paneAdd');
-        const paneList = document.getElementById('paneList');
-        if (!tabAdd || !tabList || !paneAdd || !paneList) return;
-        const activateTab = (showAdd) => {
-          paneAdd.style.display = showAdd ? '' : 'none';
-          paneList.style.display = showAdd ? 'none' : '';
-          tabAdd.classList.toggle('is-active', showAdd);
-          tabList.classList.toggle('is-active', !showAdd);
-        };
-        tabAdd.onclick = () => {
-          activateTab(true);
-        };
-        tabList.onclick = () => {
-          activateTab(false);
-        };
-        activateTab(true);
+      (notice ? '<p class="user-admin-notice">' + notice + '</p>' : '') +
+      '<section class="user-admin-table-wrap"><table class="user-admin-table"><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>' + listRows() + '</tbody></table></section>' +
+      '<footer class="user-admin-footer"><span>Total ' + users.length + ' user account' + (users.length === 1 ? '' : 's') + '</span><button id="userAdminFooterClose" class="user-admin-secondary" type="button">Close</button></footer>';
+    const addView = () =>
+      modalHeader() +
+      '<button id="userAdminBack" class="user-admin-back" type="button">&larr; Back to Users</button>' +
+      '<section class="user-admin-form-card">' +
+      '<div class="user-admin-form-head"><span class="settings-card-icon">+</span><div><h4>Add User</h4><p>Create a username, password and access role.</p></div></div>' +
+      '<form id="userAdminForm" class="user-admin-form-grid">' +
+      '<label class="settings-field"><span>Username</span><input id="sw-user" class="settings-input" autocomplete="off" placeholder="e.g. somchai.s"></label>' +
+      '<label class="settings-field"><span>Password</span><input id="sw-pass" class="settings-input" type="password" placeholder="Minimum 4 characters"></label>' +
+      '<label class="settings-field user-admin-role-field"><span>Access Role</span><select id="sw-role" class="settings-select"><option value="user">User - View documents</option><option value="admin">Admin - Manage documents and users</option></select></label>' +
+      '<p id="userAdminError" class="user-admin-inline-error" role="alert"></p>' +
+      '<div class="user-admin-form-actions"><button id="userAdminCancel" class="user-admin-secondary" type="button">Cancel</button><button id="userAdminCreate" class="user-admin-primary" type="submit">Create User</button></div>' +
+      '</form>' +
+      '<p class="user-admin-form-note">User accounts are stored in the connected Google Sheet.</p>' +
+      '</section>';
+    await themedSwal({
+      width: 860,
+      html: '<div id="userAdminRoot" class="user-admin-root"></div>',
+      background: '#102535',
+      color: '#f5fbff',
+      customClass: {
+        popup: 'rmt-swal rmt-swal-settings',
+        htmlContainer: 'rmt-swal-html rmt-swal-settings-html'
       },
-      preConfirm: () => {
-        const paneAdd = document.getElementById('paneAdd');
-        if (paneAdd && paneAdd.style.display === 'none') return false;
-        const username = document.getElementById('sw-user').value.trim();
-        const password = document.getElementById('sw-pass').value.trim();
-        const role = document.getElementById('sw-role').value;
-        if (!username || !password) {
-          Swal.showValidationMessage('Please fill username and password');
-          return false;
-        }
-        return { username, password, role };
+      showConfirmButton: false,
+      showCancelButton: false,
+      didOpen: () => {
+        const root = document.getElementById('userAdminRoot');
+        if (!root) return;
+        const bindClose = () => {
+          const close = root.querySelector('#userAdminClose');
+          const footerClose = root.querySelector('#userAdminFooterClose');
+          if (close) close.onclick = () => Swal.close();
+          if (footerClose) footerClose.onclick = () => Swal.close();
+        };
+        const renderList = () => {
+          root.innerHTML = listView();
+          bindClose();
+          const search = root.querySelector('#userAdminSearch');
+          const add = root.querySelector('#userAdminAdd');
+          if (add) add.onclick = renderAdd;
+          if (search) {
+            search.oninput = () => {
+              const query = search.value.toLowerCase().trim();
+              root.querySelectorAll('[data-user-row]').forEach((row) => {
+                const matched = !query || row.getAttribute('data-user-row').includes(query);
+                row.hidden = !matched;
+                const detail = root.querySelector('[data-user-detail-row="' + row.querySelector('[data-user-detail]').getAttribute('data-user-detail') + '"]');
+                if (!matched && detail) detail.hidden = true;
+              });
+            };
+          }
+          root.querySelectorAll('[data-user-detail]').forEach((button) => {
+            button.onclick = () => {
+              const detail = root.querySelector('[data-user-detail-row="' + button.getAttribute('data-user-detail') + '"]');
+              if (detail) detail.hidden = !detail.hidden;
+            };
+          });
+        };
+        const renderAdd = () => {
+          root.innerHTML = addView();
+          bindClose();
+          const back = root.querySelector('#userAdminBack');
+          const cancel = root.querySelector('#userAdminCancel');
+          const form = root.querySelector('#userAdminForm');
+          if (back) back.onclick = renderList;
+          if (cancel) cancel.onclick = renderList;
+          if (form) form.onsubmit = async (event) => {
+            event.preventDefault();
+            const username = root.querySelector('#sw-user').value.trim();
+            const password = root.querySelector('#sw-pass').value.trim();
+            const role = root.querySelector('#sw-role').value;
+            const error = root.querySelector('#userAdminError');
+            const create = root.querySelector('#userAdminCreate');
+            if (!username || !password) {
+              if (error) error.textContent = 'Please fill username and password.';
+              return;
+            }
+            if (create) {
+              create.disabled = true;
+              create.textContent = 'Creating...';
+            }
+            try {
+              const addRes = await postAction({ action: 'addUser', actor: localStorage.getItem('rmt_actor') || 'admin', username, password, role });
+              if (!addRes.ok) {
+                if (error) error.textContent = addRes.error || 'Cannot add user.';
+                if (create) {
+                  create.disabled = false;
+                  create.textContent = 'Create User';
+                }
+                return;
+              }
+              const refreshed = await postAction({ action: 'listUsers' });
+              if (refreshed.ok) users = refreshed.users || users;
+              notice = 'User created: ' + addRes.username;
+              renderList();
+            } catch (err) {
+              if (error) error.textContent = 'Cannot connect to server. Please try again.';
+              if (create) {
+                create.disabled = false;
+                create.textContent = 'Create User';
+              }
+            }
+          };
+        };
+        renderList();
       }
     });
-    if (!result.isConfirmed) return;
-    if (!result.value) return;
-    const addRes = await postAction({ action: 'addUser', actor: localStorage.getItem('rmt_actor') || 'admin', username: result.value.username, password: result.value.password, role: result.value.role });
-    if (!addRes.ok) return themedSwal({ icon: 'error', title: 'Error', text: addRes.error || 'Cannot add user' });
-    themedSwal({ icon: 'success', title: 'Success', text: 'User created: ' + addRes.username });
   };
 
   async function onReplace(doc) {
@@ -395,20 +433,13 @@ async function initDashboard() {
       title: 'Replace PDF - ' + docName,
       width: 760,
       html:
-        '<div style="text-align:left">' +
-        '<p style="margin:0 0 12px;color:#5f6f7f;font-size:13px">Upload a new revision file. QR code will remain the same and users will see the latest version.</p>' +
-        '<div style="display:grid;gap:12px">' +
-        '<div style="border:1px dashed #aac6cf;border-radius:12px;background:#f7fcfb;padding:14px">' +
-        '<label style="display:block;margin-bottom:8px;font-weight:700;color:#1f3447">New PDF Revision</label>' +
-        '<input id="sw-file" class="swal2-file" type="file" accept="application/pdf" style="margin:0;width:100%">' +
-        '<p style="margin:8px 0 0;color:#688092;font-size:12px">Allowed type: PDF, max size: 25 MB</p>' +
+        '<section class="document-form-modal">' +
+        '<p class="document-form-intro">Upload a new revision file. The existing QR code remains active and opens the latest version.</p>' +
+        '<div class="document-form-fields">' +
+        '<label class="document-upload-zone"><span>New PDF Revision</span><input id="sw-file" class="swal2-file" type="file" accept="application/pdf"><small>Allowed type: PDF, max size: 25 MB</small></label>' +
+        '<label class="document-form-field"><span>Revision Remark <em>Optional</em></span><input id="sw-remark" class="swal2-input" placeholder="e.g. Update section 4.2 for machine setup"></label>' +
         '</div>' +
-        '<div>' +
-        '<label style="display:block;margin-bottom:6px;font-weight:700;color:#1f3447">Revision Remark (Optional)</label>' +
-        '<input id="sw-remark" class="swal2-input" placeholder="e.g. Update section 4.2 for machine setup" style="margin:0;width:100%">' +
-        '</div>' +
-        '</div>' +
-        '</div>',
+        '</section>',
       showCancelButton: true,
       confirmButtonText: 'Upload Revision',
       cancelButtonText: 'Cancel',
@@ -463,7 +494,8 @@ async function initDashboard() {
       inputPlaceholder: 'Reason for deletion',
       showCancelButton: true,
       confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel'
+      cancelButtonText: 'Cancel',
+      customClass: { confirmButton: 'rmt-swal-confirm rmt-swal-danger-confirm' }
     });
     if (!result.isConfirmed) return;
     showLoading('Deleting document...');
@@ -480,12 +512,19 @@ async function initDashboard() {
   }
 
   function render(list) {
+    const totalItems = list.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
+    const pageStart = (currentPage - 1) * pageSize;
+    const pageItems = list.slice(pageStart, pageStart + pageSize);
     body.innerHTML = '';
-    list.forEach((d, idx) => {
+    pageItems.forEach((d, idx) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${d.docId}</td><td>${d.documentName}</td><td><span class="pill">v${d.version}</span></td><td>${d.updatedDate}</td><td><button class="icon-btn" title="QR Code" data-act="qr" data-id="${d.docId}">${iconSvg('qr')}</button></td><td><div class="actions"><button class="icon-btn" title="View" data-act="view" data-id="${d.docId}">${iconSvg('view')}</button><button class="icon-btn" title="Replace" data-act="replace" data-id="${d.docId}">${iconSvg('replace')}</button><button class="icon-btn" title="History" data-act="history" data-id="${d.docId}">${iconSvg('history')}</button><button class="icon-btn icon-danger" title="Delete" data-act="delete" data-id="${d.docId}">${iconSvg('delete')}</button></div></td>`;
+      const fileIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7Z"/><path d="M14 3v5h5"/><path d="M10 14h4M10 18h4"/></svg>';
+      tr.innerHTML = `<td><div class="doc-identity"><span class="doc-file-icon">${fileIcon}</span><span class="doc-identity-copy"><span class="doc-name">${d.documentName}</span><span class="doc-id">${d.docId}</span></span></div></td><td><span class="pill">v${d.version}</span></td><td><span class="doc-updated">${d.updatedDate}</span></td><td><button class="icon-btn" title="QR Code" aria-label="Show QR code" data-act="qr" data-id="${d.docId}">${iconSvg('qr')}</button></td><td><div class="actions"><button class="icon-btn" title="View document" aria-label="View document" data-act="view" data-id="${d.docId}">${iconSvg('view')}</button><button class="icon-btn" title="Update PDF" aria-label="Update PDF" data-act="replace" data-id="${d.docId}">${iconSvg('replace')}</button><button class="icon-btn" title="Version history" aria-label="View version history" data-act="history" data-id="${d.docId}">${iconSvg('history')}</button><button class="icon-btn icon-danger" title="Delete document" aria-label="Delete document" data-act="delete" data-id="${d.docId}">${iconSvg('delete')}</button></div></td>`;
       body.appendChild(tr);
     });
+    renderPagination(totalItems, totalPages, pageStart);
     body.querySelectorAll('button[data-act]').forEach((btn) => {
       btn.onclick = () => {
         const act = btn.getAttribute('data-act');
@@ -494,10 +533,23 @@ async function initDashboard() {
         if (act === 'qr' && doc) {
           themedSwal({
             title: 'QR Code - ' + id,
-            width: 440,
-            html: '<div id="sw-qr" style="display:flex;justify-content:center;padding:8px 0"></div><p style="font-size:12px;color:#66798b;margin:8px 0 12px;word-break:break-all">' + doc.qrUrl + '</p><div style="display:flex;justify-content:center"><button id="btnDownloadQr" type="button" style="padding:10px 14px;border-radius:10px;border:1px solid #d7e2ea;background:#fff;color:#274157;font-weight:700;cursor:pointer">Download QR</button></div>',
+            width: 460,
+            showCloseButton: true,
+            customClass: {
+              popup: 'rmt-swal rmt-swal-qr',
+              title: 'rmt-swal-title rmt-swal-qr-title',
+              htmlContainer: 'rmt-swal-html rmt-swal-qr-html',
+              closeButton: 'rmt-swal-qr-close'
+            },
+            html: '<section class="qr-modal"><div class="qr-modal-document"><span class="qr-modal-label">Document</span><strong id="swQrDocumentName" class="qr-modal-document-name"></strong><span id="swQrDocumentId" class="qr-modal-document-id"></span></div><div class="qr-modal-code-card"><div id="sw-qr" class="qr-modal-code"></div></div><p class="qr-modal-help">Scan to open the latest controlled document.</p><p id="swQrUrl" class="qr-modal-url"></p><button id="btnDownloadQr" class="qr-download-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>Download QR</button></section>',
             didOpen: () => {
               const node = document.getElementById('sw-qr');
+              const documentName = document.getElementById('swQrDocumentName');
+              const documentId = document.getElementById('swQrDocumentId');
+              const qrUrl = document.getElementById('swQrUrl');
+              if (documentName) documentName.textContent = doc.documentName || id;
+              if (documentId) documentId.textContent = id;
+              if (qrUrl) qrUrl.textContent = doc.qrUrl || '';
               if (node) {
                 new QRCode(node, { text: doc.qrUrl, width: 220, height: 220 });
               }
@@ -519,6 +571,32 @@ async function initDashboard() {
         if (act === 'replace' && doc) onReplace(doc);
         if (act === 'history' && doc) onHistory(doc);
         if (act === 'delete') onDelete(id);
+      };
+    });
+  }
+
+  function renderPagination(totalItems, totalPages, pageStart) {
+    if (!documentPagination) return;
+    const firstItem = totalItems ? pageStart + 1 : 0;
+    const lastItem = Math.min(pageStart + pageSize, totalItems);
+    const pageNumbers = [];
+    const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+    const lastPage = Math.min(totalPages, firstPage + 4);
+    for (let page = firstPage; page <= lastPage; page += 1) pageNumbers.push(page);
+    documentPagination.innerHTML =
+      '<span class="pagination-summary">Showing ' + firstItem + '-' + lastItem + ' of ' + totalItems + ' documents</span>' +
+      '<div class="pagination-controls">' +
+      '<button class="pagination-button" type="button" data-page="prev" aria-label="Previous page"' + (currentPage === 1 ? ' disabled' : '') + '>Prev</button>' +
+      pageNumbers.map((page) => '<button class="pagination-button' + (page === currentPage ? ' is-active' : '') + '" type="button" data-page="' + page + '" aria-label="Page ' + page + '"' + (page === currentPage ? ' aria-current="page"' : '') + '>' + page + '</button>').join('') +
+      '<button class="pagination-button" type="button" data-page="next" aria-label="Next page"' + (currentPage === totalPages ? ' disabled' : '') + '>Next</button>' +
+      '</div>';
+    documentPagination.querySelectorAll('button[data-page]').forEach((button) => {
+      button.onclick = () => {
+        const target = button.getAttribute('data-page');
+        if (target === 'prev') currentPage -= 1;
+        else if (target === 'next') currentPage += 1;
+        else currentPage = Number(target);
+        applyFilters(false);
       };
     });
   }
@@ -552,7 +630,8 @@ async function initDashboard() {
     });
   }
 
-  function applyFilters() {
+  function applyFilters(resetPage = true) {
+    if (resetPage) currentPage = 1;
     const q = searchBox.value.toLowerCase().trim();
     const bySummary = docsBySummaryFilter(docs, activeSummaryFilter);
     if (!q) {

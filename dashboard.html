@@ -7,55 +7,164 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <link rel="stylesheet" href="./styles.css" />
+  <style>
+    :root { --db-text:#f5fbff; --db-muted:#adbfcb; --db-line:rgba(226,243,250,.16); --db-purple:#a78bfa; --db-surface:rgba(10,31,45,.76); }
+    .safedocs-dashboard { min-height:100vh; margin:0; color:var(--db-text); background:radial-gradient(circle at 86% 9%,rgba(120,93,214,.20),transparent 29rem),linear-gradient(128deg,rgba(5,20,33,.92),rgba(7,48,61,.75)),url("./assets/background.png") center/cover no-repeat fixed; }
+    .safedocs-dashboard .db-topbar { min-height:68px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:10px max(30px,env(safe-area-inset-right)) 10px max(30px,env(safe-area-inset-left)); border:0; border-bottom:1px solid var(--db-line); background:rgba(7,22,34,.76); backdrop-filter:blur(18px); }
+    .db-brand { display:flex; align-items:center; gap:13px; min-width:0; }
+    .db-brand-icon { width:38px; height:38px; display:grid; place-items:center; flex:0 0 auto; border:1px solid rgba(210,190,255,.25); border-radius:13px; color:#e9deff; background:linear-gradient(145deg,#be9cff,#7651d5); box-shadow:0 10px 22px rgba(104,74,194,.28),inset 0 1px 0 rgba(255,255,255,.32); }
+    .db-brand-icon svg,.db-stat-icon svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.85; stroke-linecap:round; stroke-linejoin:round; }
+    .db-brand-copy { min-width:0; }
+    .db-brand-copy strong { display:block; color:#fff; font-size:15px; font-weight:800; line-height:1.2; }
+    .db-brand-copy span { display:block; margin-top:3px; color:#a8bdc9; font-size:11px; font-weight:700; letter-spacing:.10em; text-transform:uppercase; }
+    .db-topbar-right { display:flex; align-items:center; gap:14px; margin-left:auto; }
+    .db-actions { display:flex; align-items:center; gap:8px; }
+    .db-actions button { min-height:40px; padding:0 14px; border:1px solid rgba(224,240,247,.16); border-radius:11px; color:#dceaf0; background:rgba(255,255,255,.07); box-shadow:none; transition:transform .18s ease,background .18s ease,border-color .18s ease; }
+    .db-actions button:hover { transform:translateY(-1px); border-color:rgba(210,194,255,.44); background:rgba(255,255,255,.13); box-shadow:none; }
+    .db-actions #btnLogout { margin-left:5px; color:#ffc8c8; border-color:rgba(255,170,170,.22); }
+    .db-actions #btnLogout:hover { background:rgba(184,61,61,.18); border-color:rgba(255,170,170,.42); color:#ffe0e0; }
+    .db-logo { width:auto; height:28px; margin-left:14px; object-fit:contain; }
+    .safedocs-dashboard .db-shell { width:min(1320px,100%); margin:0 auto; padding:22px max(24px,env(safe-area-inset-right)) 34px max(24px,env(safe-area-inset-left)); }
+    .db-page-head { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:15px; }
+    .db-eyebrow { display:flex; align-items:center; gap:9px; margin:0 0 6px; color:#bfd0dc; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+    .db-eyebrow::before { content:""; width:24px; height:1px; background:var(--db-purple); }
+    .db-page-head h1 { margin:0; color:#fff; font-size:clamp(25px,3vw,32px); font-weight:800; letter-spacing:-.035em; }
+    .db-page-head h1 span { color:#c6b1ff; }
+    .db-page-subtitle { margin:5px 0 0; color:#aebfca; font-size:13px; font-weight:600; }
+    .db-user-chip { display:flex; align-items:center; gap:8px; padding:8px 11px; border:1px solid var(--db-line); border-radius:12px; color:#c9d9e1; background:rgba(255,255,255,.06); font-size:11px; font-weight:700; }
+    .db-user-chip::before { content:""; width:8px; height:8px; border-radius:99px; background:#5fd4a5; box-shadow:0 0 0 4px rgba(95,212,165,.12); }
+    .safedocs-dashboard .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:15px; }
+    .safedocs-dashboard .summary-card { position:relative; min-width:0; min-height:88px; display:grid; grid-template-columns:34px minmax(0,1fr); grid-template-areas:"icon label" "icon value"; align-content:center; column-gap:11px; row-gap:4px; overflow:hidden; padding:13px 15px; border:1px solid var(--db-line); border-radius:15px; color:var(--db-text); background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.035)); box-shadow:inset 0 1px 0 rgba(255,255,255,.07); }
+    .safedocs-dashboard .summary-clickable { cursor:pointer; }
+    .safedocs-dashboard .summary-clickable:hover { transform:translateY(-2px); border-color:rgba(194,175,255,.46); background:linear-gradient(145deg,rgba(167,139,250,.18),rgba(255,255,255,.07)); box-shadow:0 14px 28px rgba(2,14,24,.16); }
+    .safedocs-dashboard .summary-card.is-active { border-color:rgba(193,172,255,.70); background:linear-gradient(145deg,rgba(167,139,250,.27),rgba(255,255,255,.07)); }
+    .safedocs-dashboard .summary-card-info { opacity:.78; background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.035)); }
+    .safedocs-dashboard .summary-card-info::after { content:"Info"; position:absolute; top:11px; right:11px; padding:3px 6px; border:1px solid rgba(222,240,247,.13); border-radius:999px; color:#aabec9; font-size:8px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .db-stat-icon { grid-area:icon; width:34px; height:34px; display:grid; place-items:center; margin:0; border-radius:11px; color:#e7ddff; background:rgba(167,139,250,.16); }
+    .summary-card:nth-child(2) .db-stat-icon { color:#a5e9ff; background:rgba(56,189,248,.15); }
+    .summary-card:nth-child(3) .db-stat-icon { color:#ffdda1; background:rgba(245,158,11,.15); }
+    .summary-card:nth-child(4) .db-stat-icon { color:#9bf0df; background:rgba(45,212,191,.15); }
+    .safedocs-dashboard .summary-label { grid-area:label; margin:0; color:#b6c9d5; font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+    .safedocs-dashboard .summary-value { grid-area:value; margin:0; color:#fff; font-size:27px; font-weight:800; line-height:1; }
+    .db-document-panel { overflow:hidden; border:1px solid var(--db-line); border-radius:19px; background:rgba(8,28,41,.94); box-shadow:0 22px 48px rgba(2,14,24,.20),inset 0 1px 0 rgba(255,255,255,.07); backdrop-filter:blur(16px); }
+    .safedocs-dashboard .table-head { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:18px 20px; border-bottom:1px solid var(--db-line); }
+    .safedocs-dashboard .table-title { margin:0; color:#fff; font-size:20px; font-weight:800; letter-spacing:-.02em; }
+    .safedocs-dashboard .table-subtitle { margin:5px 0 0; color:#aebfca; font-size:12px; font-weight:600; }
+    .db-document-actions { display:flex; align-items:center; gap:10px; }
+    .db-document-actions #btnAdd { min-height:42px; padding:0 14px; border:1px solid rgba(210,190,255,.35); border-radius:11px; color:#fff; background:linear-gradient(145deg,#bd9cff,#7550d4); box-shadow:0 10px 20px rgba(104,74,194,.25); white-space:nowrap; }
+    .db-document-actions #btnAdd:hover { transform:translateY(-1px); filter:brightness(1.05); }
+    .db-library-toolbar { display:flex; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid rgba(222,240,247,.10); background:rgba(255,255,255,.025); }
+    .db-library-toolbar::before { content:"Search documents"; flex:0 0 auto; color:#9fb4c0; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+    .safedocs-dashboard .search-wrap { width:100%; min-width:0; display:flex; align-items:center; gap:9px; padding:8px 9px 8px 12px; border:1px solid rgba(223,241,247,.16); border-radius:12px; background:rgba(255,255,255,.055); box-shadow:none; }
+    .safedocs-dashboard .search-wrap:hover,.safedocs-dashboard .search-wrap:focus-within { border-color:rgba(196,178,255,.52); background:rgba(255,255,255,.10); box-shadow:0 0 0 3px rgba(167,139,250,.10); }
+    .safedocs-dashboard .search-icon { width:25px; height:25px; display:grid; place-items:center; border-radius:8px; background:rgba(167,139,250,.14); }
+    .safedocs-dashboard .search-icon svg { width:15px; height:15px; stroke:#d9ceff; }
+    .safedocs-dashboard #searchBox { flex:1; min-width:0; width:auto; color:#fff; font-size:13px; font-weight:600; }
+    .safedocs-dashboard #searchBox::placeholder { color:#9eb3c0; }
+    .safedocs-dashboard .search-clear { flex:0 0 auto; min-height:31px; padding:0 11px; border:1px solid rgba(223,241,247,.16); border-radius:9px; color:#d7e5eb; background:rgba(255,255,255,.07); font-size:11px; }
+    .safedocs-dashboard .search-clear:hover { background:rgba(255,255,255,.13); }
+    .safedocs-dashboard .table-wrap { overflow-x:auto; }
+    .safedocs-dashboard table { min-width:720px; }
+    .safedocs-dashboard th { padding:12px 16px; color:#aabfcb; font-size:10px; font-weight:800; letter-spacing:.09em; background:rgba(255,255,255,.035); }
+    .safedocs-dashboard td { padding:12px 16px; color:#deebf0; font-size:13px; font-weight:600; border-color:rgba(222,240,247,.10); vertical-align:middle; }
+    .safedocs-dashboard tbody tr { transition:background .15s ease; }
+    .safedocs-dashboard tbody tr:hover { background:rgba(167,139,250,.08); }
+    .safedocs-dashboard .pill { padding:5px 9px; color:#e5ddff; background:rgba(167,139,250,.16); font-size:11px; font-weight:800; }
+    .safedocs-dashboard .actions { gap:6px; flex-wrap:nowrap; }
+    .safedocs-dashboard .icon-btn { width:33px; height:33px; border-color:rgba(222,240,247,.16); border-radius:10px; color:#dbeaf0; background:rgba(255,255,255,.06); }
+    .safedocs-dashboard .icon-btn svg { stroke:#dbeaf0; }
+    .safedocs-dashboard .icon-btn:hover { transform:translateY(-1px); border-color:rgba(196,178,255,.52); background:rgba(167,139,250,.18); }
+    .safedocs-dashboard .icon-btn.icon-danger:hover { border-color:rgba(255,170,170,.40); background:rgba(184,61,61,.18); }
+    .safedocs-dashboard .icon-btn.icon-danger svg { stroke:#ffb6b6; }
+    .doc-identity { display:flex; align-items:center; gap:10px; min-width:220px; }
+    .doc-file-icon { width:32px; height:32px; display:grid; place-items:center; flex:0 0 auto; border:1px solid rgba(201,184,255,.20); border-radius:10px; color:#ded4ff; background:rgba(167,139,250,.14); }
+    .doc-file-icon svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .doc-identity-copy { min-width:0; display:grid; gap:3px; }
+    .doc-name { overflow:hidden; color:#f1f8fb; font-size:13px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+    .doc-id { color:#8ea6b4; font-size:11px; font-weight:700; letter-spacing:.03em; }
+    .doc-updated { color:#c4d5dd; font-size:12px; white-space:nowrap; }
+    .document-pagination { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 20px; border-top:1px solid rgba(222,240,247,.10); background:rgba(255,255,255,.025); }
+    .pagination-summary { color:#9fb4c0; font-size:12px; font-weight:700; }
+    .pagination-controls { display:flex; align-items:center; gap:6px; }
+    .pagination-button { min-width:32px; height:32px; display:grid; place-items:center; padding:0 10px; border:1px solid rgba(222,240,247,.16); border-radius:9px; color:#d8e7ed; background:rgba(255,255,255,.055); font-size:12px; font-weight:800; transition:transform .16s ease,background .16s ease,border-color .16s ease; }
+    .pagination-button:hover:not(:disabled) { transform:translateY(-1px); border-color:rgba(196,178,255,.50); background:rgba(167,139,250,.16); }
+    .pagination-button.is-active { border-color:rgba(196,178,255,.62); color:#fff; background:linear-gradient(145deg,#b898ff,#7651d5); }
+    .pagination-button:disabled { cursor:not-allowed; opacity:.38; }
+    @media (max-width:900px) { .safedocs-dashboard { background-attachment:scroll; } .safedocs-dashboard .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .db-page-head { align-items:flex-start; flex-direction:column; } .safedocs-dashboard .table-head { align-items:stretch; flex-direction:column; } .db-document-actions { width:100%; } .safedocs-dashboard .search-wrap { flex:1; min-width:0; width:auto; } }
+    @media (max-width:620px) { .safedocs-dashboard .db-topbar { min-height:67px; align-items:flex-start; padding:12px max(18px,env(safe-area-inset-right)) 12px max(18px,env(safe-area-inset-left)); } .db-brand-icon { width:34px; height:34px; border-radius:11px; } .db-brand-copy strong { font-size:13px; } .db-brand-copy span { display:none; } .db-logo { height:20px; margin-left:0; } .db-topbar-right { gap:8px; } .db-actions { gap:5px; } .db-actions button { min-height:35px; padding:0 8px; font-size:10px; } .safedocs-dashboard .db-shell { padding:23px 16px 32px; } .db-page-head h1 { font-size:29px; } .safedocs-dashboard .summary-grid { gap:10px; } .safedocs-dashboard .summary-card { padding:12px; border-radius:15px; } .safedocs-dashboard .summary-value { font-size:25px; } .db-document-panel { border-radius:18px; } .safedocs-dashboard .table-head { padding:18px 16px; } .safedocs-dashboard .table-title { font-size:19px; } .db-document-actions { align-items:stretch; } .db-document-actions #btnAdd { width:100%; } .db-library-toolbar { align-items:stretch; flex-direction:column; padding:12px 16px; } .db-library-toolbar::before { display:none; } .safedocs-dashboard .search-wrap { width:100%; } .document-pagination { align-items:flex-start; flex-direction:column; padding:12px 16px; } .pagination-controls { width:100%; justify-content:flex-end; } }
+    @media (max-width:390px) { .safedocs-dashboard .db-topbar { flex-wrap:wrap; } .db-topbar-right { width:100%; justify-content:flex-end; } }
+  </style>
 </head>
-<body>
-  <header class="topbar">
-    <h1>RMT SafeDocs Dashboard</h1>
-    <div class="topbar-actions">
-      <button id="btnAdd">+ Add PDF</button>
-      <button id="btnSettings" class="ghost">Settings</button>
-      <button id="btnLogout" class="ghost ghost-danger">Logout</button>
+<body class="safedocs-dashboard">
+  <header class="topbar db-topbar">
+    <div class="db-brand">
+      <span class="db-brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7Z"/><path d="M14 3v5h5"/><path d="m10 15 1.8 1.8L15.5 13"/></svg></span>
+      <span class="db-brand-copy"><strong>RMT SafeDocs</strong><span>Document Control Workspace</span></span>
+    </div>
+    <div class="db-topbar-right">
+      <div class="db-actions topbar-actions">
+        <button id="btnSettings" type="button" class="ghost">Settings</button>
+        <button id="btnLogout" type="button" class="ghost ghost-danger">Logout</button>
+      </div>
     </div>
   </header>
-  <main class="container">
+  <main class="container db-shell">
+    <section class="db-page-head">
+      <div>
+        <p class="db-eyebrow">Safety &amp; Environment</p>
+        <h1>Documents</h1>
+        <p class="db-page-subtitle">Manage, search and control documents.</p>
+      </div>
+      <div class="db-user-chip">Document Control Center</div>
+    </section>
     <section class="summary-grid">
       <article class="summary-card summary-clickable is-active" data-filter="all">
-        <p class="summary-label">เอกสารทั้งหมด</p>
+        <span class="db-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7Z"/><path d="M14 3v5h5"/><path d="M10 13h5M10 17h5"/></svg></span>
+        <p class="summary-label">Total Documents</p>
         <p id="sumTotal" class="summary-value">0</p>
       </article>
       <article class="summary-card summary-clickable" data-filter="today">
-        <p class="summary-label">อัปเดตวันนี้</p>
+        <span class="db-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="8"/></svg></span>
+        <p class="summary-label">Updated Today</p>
         <p id="sumToday" class="summary-value">0</p>
       </article>
       <article class="summary-card summary-clickable" data-filter="week">
-        <p class="summary-label">อัปเดตใน 7 วัน</p>
+        <span class="db-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v15H4z"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></span>
+        <p class="summary-label">Updated in 7 Days</p>
         <p id="sumWeek" class="summary-value">0</p>
       </article>
-      <article class="summary-card">
-        <p class="summary-label">เวอร์ชันเฉลี่ย</p>
+      <article class="summary-card summary-card-info">
+        <span class="db-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 17 9 12l3 3 7-8"/><path d="M16 7h3v3"/></svg></span>
+        <p class="summary-label">Average Version</p>
         <p id="sumAvgVersion" class="summary-value">0.0</p>
       </article>
     </section>
-    <section class="card">
+    <section class="card db-document-panel">
       <div class="table-head">
         <div class="table-head-text">
-          <h3 class="table-title">Document List</h3>
-          <p class="table-subtitle">ค้นหาและจัดการเอกสารล่าสุดจากระบบ SafeDocs</p>
+          <h3 class="table-title">Document Library</h3>
+          <p class="table-subtitle">Manage, search and control documents.</p>
         </div>
+        <div class="db-document-actions">
+          <button id="btnAdd" type="button">+ Add PDF</button>
+        </div>
+      </div>
+      <div class="db-library-toolbar">
         <div class="search-wrap">
-          <span class="search-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-          </span>
-          <input id="searchBox" type="text" placeholder="Search by DocID or Document Name" />
-          <button id="btnClearSearch" class="ghost search-clear" type="button">Clear</button>
+            <span class="search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+            </span>
+            <input id="searchBox" type="text" placeholder="Search by DocID or Document Name" />
+            <button id="btnClearSearch" class="ghost search-clear" type="button">Clear</button>
         </div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>DocID</th><th>Document Name</th><th>Version</th><th>Updated</th><th>QR</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Document</th><th>Version</th><th>Updated</th><th>QR</th><th>Actions</th></tr></thead>
           <tbody id="docTableBody"></tbody>
         </table>
       </div>
+      <div id="documentPagination" class="document-pagination" aria-label="Document pagination"></div>
     </section>
   </main>
   <script src="./app.js"></script>
